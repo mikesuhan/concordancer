@@ -3,6 +3,8 @@ from io import BytesIO
 from textprocessing.text import Text
 from textprocessing.matcher import is_match
 from textprocessing.concordance import  Concordance
+from textprocessing.substring import Substring
+
 from message import Message
 
 class Corpus:
@@ -21,12 +23,10 @@ class Corpus:
         return self.texts[self.i]
 
     def load_texts(self, *text_paths):
-        print(text_paths)
         text_count = 0
         if not self.texts:
             self.texts = []
         for tp in text_paths:
-            print(tp)
             if tp not in self.text_paths:
                 if tp.endswith('.zip'):
                     with ZipFile(tp) as zip:
@@ -53,12 +53,10 @@ class Corpus:
     def concordance(self, query, left_len=5, right_len=5, conc_id=None, case_sensitive=False, limit=None):
         """Adds one concordance object to queue per text."""
         word_count = 0
-        print(self.text_paths)
         m = Message('Starting concordance process.')
         self.queue.put(m)
 
-        # query_str = query.strip()
-        # query = query.strip().split()
+        query = Substring(query).regexp_substring
         lines_n = 0
         texts_len = len(self.texts)
 
@@ -87,7 +85,7 @@ class Corpus:
                 self.queue.put(m)
 
         m = Message('Processed {:,} tokens in {:,} text{}. {:,} matches found.'.format(
-            word_count,    # todo make a new way to count tokens
+            word_count,
             len(self.texts),
             '' if len(self.texts) == 1 else 's',
             lines_n

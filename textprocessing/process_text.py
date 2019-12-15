@@ -37,7 +37,6 @@ class Substring:
         parenthesis_delimited_substring = [item for item in split('(\(.+?\))', substring) if item]
 
         if len(parenthesis_delimited_substring) > 1:
-            print(parenthesis_delimited_substring)
             substring = ' '.join(self.make_regexp(item.strip(), lb, rb, space, True)
                                  for item in parenthesis_delimited_substring)
 
@@ -46,7 +45,6 @@ class Substring:
             substring = '|'.join(self.make_regexp(s, lb, rb, space, True) for s in substrings)
 
         elif '_' in substring and not set(ch for ch in substring if ch not in ' _()'):
-            print('enclosed _ detected', substring)
             substring = substring.replace('_', r'[a-z0-9\\\'\-]+')
 
 

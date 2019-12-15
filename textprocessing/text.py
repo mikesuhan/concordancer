@@ -151,8 +151,7 @@ class Text:
             'right_context': right_context
                 }
 
-    def concordance(self, substring, tokens_left=5, tokens_right=5, id=None):
-
+    def concordance(self, substring, tokens_left=5, tokens_right=5, id=None, regexp=False):
         if 4 > tokens_left:
             left_max = 10
         elif 7 > tokens_left:
