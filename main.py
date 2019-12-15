@@ -11,6 +11,7 @@ from objects.fancytext import FancyText
 from objects.fancybutton import FancyButton
 from objects.fancyentry import FancyEntry
 from objects.concwindow import ConcWindow
+from objects.textwindow import TextWindow
 from message import Message
 from textprocessing.msword import write_docx
 from textprocessing.html import write_html
@@ -21,9 +22,12 @@ class GUI:
     default_conc_length = '5'
     conc_processes = []
     save_process = None
+    freq_list_processes = []
     search_val = None
     conc_windows = {}
     conc_id = 0
+    freq_list_windows = {}
+    freq_list_id = 0
 
     def __init__(self):
         self.q = Queue()
@@ -43,13 +47,26 @@ class GUI:
         file_menu = tk.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label="Load files", command=self.load_files)
         file_menu.add_command(label="Load from URL", command=self.load_from_url)
+        file_menu.add_command(label="Remove Files") #todo add this
+
+        file_menu.add_separator()
+
         file_menu.add_command(label="Save", command=self.save)
 
         file_menu.add_separator()
 
         file_menu.add_command(label="Reset", command=self.reset)
+
+        file_menu.add_separator()
+
         file_menu.add_command(label="Exit", command=self.root.quit)
         menu_bar.add_cascade(label="File", menu=file_menu)
+
+        # Tools menu
+        make_menu = tk.Menu(menu_bar, tearoff=0)
+        make_menu.add_command(label='Frequency list', command=self.freq_list)
+        menu_bar.add_cascade(label='Make', menu=make_menu)
+
         self.root.config(menu=menu_bar, background=fm.dark_bg)
 
         # search bar
@@ -84,6 +101,20 @@ class GUI:
 
 
         tk.mainloop()
+
+    def freq_list(self):
+        if self.corpus is None or len(self.corpus.texts) == 0:
+            m = Message('You must load texts before making a frequency list. Select "File > Load files" to load texts.',
+                        tag='red')
+            self.msg(m)
+
+        else:
+            p = Process(target=self.corpus.freq_dist)
+            p.start()
+            self.freq_list_processes.append(p)
+            self.root.after(100, self.process_queue)
+
+
 
     def save(self, text, max_center_len):
         file_types = (('Word', '.docx'), ('Excel', '.xlsx'), ('plaintext', '.txt'), ('tab-separated values', '.tsv'),
@@ -164,7 +195,7 @@ class GUI:
         self.status_text.insert(1.0, m + '\n', tag)
 
     def process_queue(self):
-        for p in self.conc_processes:
+        for p in self.conc_processes + self.freq_list_processes:
             if p.is_alive():
                 self.root.after(100, self.process_queue)
                 break
@@ -196,22 +227,25 @@ class GUI:
                 self.conc_windows[q_item.id].text.insert(tk.END, q_item.to_string())
 
 
-                #for i, indices in enumerate(q_item.center_inds):
-                #    self.conc_windows[q_item.id].center_inds[q_item.line_s + i] = indices
-                #    print(q_item.line_s + i, indices)
-
+                for i, indices in enumerate(q_item.center_inds):
+                    self.conc_windows[q_item.id].center_inds[q_item.line_s + i] = indices
+                    print(q_item.line_s + i, indices)
 
             elif type(q_item) is Message:
                 self.msg(q_item)
 
+            elif type(q_item) is dict:
+                self.freq_list_windows[self.freq_list_id] = TextWindow(self.root)
+                header = '{w}\tFrequency\t\tDispersion\n\n'.format(w='Word'.ljust(20))
+                self.freq_list_windows[self.freq_list_id].text.insert(tk.END, header)
+                for w, f, d in q_item['results']:
+                    item = '{}\t{:<9,}\t\t{:,}\n'.format(w.ljust(20), f, d)
+                    self.freq_list_windows[self.freq_list_id].text.insert(tk.END, item)
+
             self.root.after(100, self.process_queue)
-
-
-
 
         except queue.Empty:
             pass
-
 
     def clear_queue(self):
         try:

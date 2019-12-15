@@ -14,7 +14,7 @@ class Concordance:
         self.pad_left = pad_left
         self.lines = []
         self.center_inds = []
-        self.line_s = None
+        self.line_s = line_s
         self.line_e = None
 
     def max(self, i=1):

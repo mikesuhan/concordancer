@@ -1,5 +1,6 @@
 from zipfile import ZipFile
 from io import BytesIO
+from collections import defaultdict
 from textprocessing.text import Text
 from textprocessing.matcher import is_match
 from textprocessing.concordance import  Concordance
@@ -72,6 +73,7 @@ class Corpus:
 
             conc = text.concordance(query, left_len, right_len, id=conc_id)
             if conc.lines:
+                conc.line_s = lines_n
                 lines_n += len(conc.lines)
                 self.queue.put(conc)
 
@@ -93,6 +95,43 @@ class Corpus:
         tag='red')
 
         self.queue.put(m)
+
+    def freq_dist(self):
+        frequencies = defaultdict(int)
+        dispersions = defaultdict(int)
+        tokens_n = 0
+        # types = []
+        for i, text in enumerate(self.texts):
+            print(i)
+            m = 'Processing text {:,} of {:,}.'.format(i + 1, len(self.texts))
+            m = Message(m)
+            self.queue.put(m)
+
+            tokens = text.re_word_tokenize(text.text)
+            for token in set(tokens):
+                n = tokens.count(token)
+                frequencies[token] += n
+                dispersions[token] += 1
+                tokens_n += n
+            # types += list(fd.keys())
+            # types = list(set(types))
+
+        # types_n = len(types)
+
+        results = {
+            'results': sorted(((k, frequencies[k], dispersions[k]) for k in frequencies), key=lambda x: x[1], reverse=True),
+            'tokens_n': tokens_n,
+            # 'types_n': types_n
+        }
+
+        print('results', type(results), type(results) is dict, results)
+
+        self.queue.put(results)
+        m = 'Frequency list ready.'
+        m = Message(m, tag='red')
+        self.queue.put(m)
+
+
 
 
 

@@ -20,14 +20,14 @@ class Substring:
 
         elif '_' in substring and not set(ch for ch in substring if ch not in ' _()'):
             print('enclosed _ detected', substring)
-            substring = substring.replace('_', r'[a-z0-9\\\'\-]+')
+            substring = substring.replace('_', r'[\w\\\'\-]+')
 
 
         elif ' _ ' in substring:
             substrings = substring.split()
             for i, substring in enumerate(substrings):
                 if substring.strip() == '_':
-                    substrings[i] = r'[a-z0-9\\\'\-]+'
+                    substrings[i] = r'[\w\\\'\-]+'
 
             # making regexp for spaces will occur in a recursion of make_regexp
             substring = ' '.join(substrings)
@@ -39,28 +39,28 @@ class Substring:
             # match ZERO or more characters at beginning of substring -- matches forms starting with token and token
             for i, substring in enumerate(substrings):
                 if substring.endswith('*)'):
-                    substring = r'{st}[a-z0-9]*)'.format(st=substring[:-2])
+                    substring = r'{st}\w*)'.format(st=substring[:-2])
                 if substring.endswith('*'):
                     # With MySQL regexp, \b is [[:<:]] and [[:>:]] for start and end of word boundaries
-                    substring = r'{st}[a-z0-9]*'.format(st=substring[:-1])
+                    substring = r'{st}\w*'.format(st=substring[:-1])
 
                 # match ZERO or more characters at beginning of substring -- matches forms ending with token and token
                 if substring.startswith('(*'):
-                    substring = r'([a-z0-9]*{st}'.format(st=substring[2:])
+                    substring = r'(\w*{st}'.format(st=substring[2:])
                 if substring.startswith('*'):
-                    substring = r'[a-z0-9]*{st}'.format(st=substring[1:])
+                    substring = r'\w*{st}'.format(st=substring[1:])
 
                 # match ONE or more character at end of substring' -- matches starting with token but not token
                 if substring.endswith('+)'):
-                    substring = r'{st}[a-z0-9]+)'.format(st=substring[:-2])
+                    substring = r'{st}\w+)'.format(st=substring[:-2])
                 if substring.endswith('+'):
-                    substring = r'{st}[a-z0-9]+'.format(st=substring[:-1])
+                    substring = r'{st}\w+'.format(st=substring[:-1])
 
                 # match ONE or more character at beginning of substring -- matches forms ending with token but not token
                 if substring.startswith('(+'):
-                    substring = r'([a-z0-9]+{st}'.format(st=substring[2:])
+                    substring = r'(\w+{st}'.format(st=substring[2:])
                 if substring.startswith('+'):
-                    substring = r'[a-z0-9]+{st}'.format(st=substring[1:])
+                    substring = r'\w+{st}'.format(st=substring[1:])
 
                 #substring = r'{lb}{st}{rb}'.format(st=substring, lb=lb, rb=rb)
                 substrings[i] = substring

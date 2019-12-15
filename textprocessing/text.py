@@ -111,8 +111,11 @@ class Text:
 
         return tokens
 
+    def re_word_tokenize(self, text):
+        return findall('\w+', text.lower())
+
     def freq_dist(self):
-        tokens = self.word_tokenize(self.text, str.lower)
+        tokens = self.re_word_tokenize(self.text)
         return {token: tokens.count(token) for token in set(tokens)}
 
     def context(self, substring_left, substring_right, chars=1000):
