@@ -2,7 +2,7 @@
 
 from re import finditer, IGNORECASE, sub, findall
 # from mammoth import convert_to_html
-from textprocessing.process_text import parse_srt
+from textprocessing.srt import parse_srt
 
 from textprocessing.concordance import Concordance
 from textprocessing.msword import read_docx

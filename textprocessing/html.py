@@ -60,3 +60,26 @@ def write_html(fp, tsv):
     with open(fp, 'w') as f:
         f.write(html)
     print(fp)
+
+
+def parse_html(text):
+    if not text:
+        return ''
+
+    text = text.strip().replace('<', '&lt;').replace('>', '&gt;')
+    text = text.split('\n')
+    ul = False
+    for i, line in enumerate(text):
+        if len(line) > 1 and line[0] == '*':
+            text[i] = '<li>' + line[1:] + '</li>'
+            if not ul:
+                text[i] = '<ul>' + text[i]
+                ul = True
+            if i == len(text):
+                text[i] += '</ul>'
+        elif ul:
+            text[i] = '</ul>' + text[i]
+        elif len(text) > i+1 and text[i+1] and text[i+1][0] != '*':
+            text[i] += '<br/>'
+
+    return ''.join(text)
