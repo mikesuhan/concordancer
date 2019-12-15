@@ -72,12 +72,6 @@ class Text:
 
 
     def word_tokenize(self, t, *funcs):
-        """
-        if self.filename and self.filename.endswith('.docx'):
-            t = self.remove_html(t)
-            with open('ex', 'w') as f:
-                f.write(t)
-        """
         for func in funcs:
             t = func(t)
 
