@@ -6,14 +6,17 @@ class ConcWindow(tk.Toplevel):
 
     max_center_len= 0
 
-    def __init__(self, parent, query, id, save,  *args, **kwargs):
+    def __init__(self, parent, query, corpus, id, save,  *args, **kwargs):
         tk.Toplevel.__init__(self, parent, *args, **kwargs)
         self.query = query
         self.parent = parent
+        self.corpus = corpus
         self.id = id
         self.title('Results for ' + query)
 
-        self.center_inds = {}
+        self.center_inds = []
+        self.text_locs = []
+
         self.bind('<Double-Button-1>', self.db_click)
 
         top_frame = tk.Frame(self)
@@ -40,14 +43,40 @@ class ConcWindow(tk.Toplevel):
         self.config(menu=menu_bar)
 
     def db_click(self, event):
-        print(self.text.index(tk.INSERT))
+
         ins_ind = self.text.index(tk.INSERT)
         row, col = str(ins_ind).split('.')
         row, col = int(row), int(col)
 
-        w_left, w_right = self.center_inds.get(row, (0, 0))
-        if w_right -1 > col >= w_left:
-            print('MATCH', ins_ind, w_left, w_right)
+        w_left, w_right = self.center_inds[row - 1]
+        if w_right  > col > w_left:
+            left_i, right_i, text_i = self.text_locs[row-1]
+            self.show_context(left_i, right_i, text_i)
 
-        #text_window = TextWindow(self)
 
+    def show_context(self, left_i, right_i, text_i):
+        t = self.corpus.texts[text_i].text
+        text_window = TextWindow(self.parent, title=self.corpus.texts[text_i].filepath)
+        text_window.text.tag_config('highlight', foreground='red')
+        text_window.text.tag_config('context', foreground='red', background='yellow')
+
+        # gets indices from text that has been clicked on
+        single_text_locs = [item for item in self.text_locs if item[-1] == text_i]
+
+        # adds text coming before first match
+        if single_text_locs[0][0] > 0:
+            text_window.text.insert(tk.END, t[:single_text_locs[0][0]])
+
+        # highlights matches and adds text between match i and the following match
+        for i, (ltl, rtl, _) in enumerate(single_text_locs):
+
+            if ltl == left_i:
+                text_window.text.insert(tk.END, t[ltl:rtl], 'context')
+                text_window.text.see(tk.END)
+            else:
+                text_window.text.insert(tk.END, t[ltl:rtl], 'highlight')
+            if len(t) > rtl + 1:
+                if len(single_text_locs) > i + 1:
+                    text_window.text.insert(tk.END, t[rtl:single_text_locs[i+1][0]])
+                else:
+                    text_window.text.insert(tk.END, t[rtl:])

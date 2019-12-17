@@ -34,13 +34,13 @@ class Corpus:
                         for fn in zip.namelist():
                             with zip.open(fn) as f:
                                 self.text_paths.append(fn)
-                                self.texts.append(Text(filepath=fn, io=BytesIO(f.read())))
+                                self.texts.append(Text(filepath=fn, io=BytesIO(f.read()), id=text_count))
                                 text_count += 1
 
 
                 else:
                     self.text_paths.append(tp)
-                    self.texts.append(Text(filepath=tp))
+                    self.texts.append(Text(filepath=tp, id=text_count))
                     text_count += 1
         m = '{:,} text{} loaded.'.format(
             text_count,
@@ -56,6 +56,7 @@ class Corpus:
         word_count = 0
         m = Message('Starting concordance process.')
         self.queue.put(m)
+        print('conc_id', conc_id)
 
         query = Substring(query).regexp_substring
         lines_n = 0
@@ -71,9 +72,10 @@ class Corpus:
             if lines_n == limit:
                 break
 
-            conc = text.concordance(query, left_len, right_len, id=conc_id)
+            conc = text.concordance(query, left_len, right_len, conc_id=conc_id)
             if conc.lines:
                 conc.line_s = lines_n
+                conc.text_i = k
                 lines_n += len(conc.lines)
                 self.queue.put(conc)
 

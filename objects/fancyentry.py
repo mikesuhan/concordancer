@@ -5,7 +5,7 @@ class FancyEntry(tk.Entry):
 
     def __init__(self, parent, *args, **kwargs):
         tk.Entry.__init__(self, parent, *args, **kwargs, background=fm.entry_bg, foreground=fm.entry_fg, insertbackground=fm.entry_fg,
-                          font=fm.entry_font)
+                          font=fm.entry_font, borderwidth=1)
         self.parent = parent
         self.popup_menu = tk.Menu(self, tearoff=0)
         self.popup_menu.add_command(label="Cut", command=self.cut_selected)

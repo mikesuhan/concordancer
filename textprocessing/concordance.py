@@ -9,6 +9,7 @@ class Concordance:
             lines_s: starting line of these lines among all lines
         """
         self.query = query
+        print('concordance', id)
         self.id = id
         self.text_i = text_i
         self.pad_left = pad_left
@@ -16,6 +17,7 @@ class Concordance:
         self.center_inds = []
         self.line_s = line_s
         self.line_e = None
+        self.text_locs = []
 
     def max(self, i=1):
             return max(len(item[i].strip()) for item in self.lines)
@@ -23,11 +25,11 @@ class Concordance:
 
     def add(self, conc_dict):
         line = ' '.join(conc_dict['left']), ' '.join(conc_dict['center']), ' '.join(conc_dict['right'])
-        # self.line_e += 1
         first_ind = self.pad_left if self.pad_left > len(conc_dict['left']) else len(conc_dict['left'])
         second_ind = first_ind + len(conc_dict['center']) + 1
         self.center_inds.append((first_ind, second_ind))
         self.lines.append(line)
+        self.text_locs.append((conc_dict['substring_left'], conc_dict['substring_right'], self.text_i))
 
     def to_string(self, end='\n', delimiter='\t'):
         return ''.join('{left}{d}{center}{d}{right}\n'.format(

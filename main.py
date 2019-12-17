@@ -87,6 +87,8 @@ class GUI:
         search_button.pack(side=tk.RIGHT, fill=tk.Y)
         search_button.pack()
 
+        self.root.bind('<Return>', self.search_kp)
+
         search_frame.pack(expand=tk.YES, side=tk.TOP, fill=tk.X)
 
         # status area
@@ -133,6 +135,8 @@ class GUI:
         elif fp.endswith('.html'):
             write_html(fp, text)
 
+    def search_kp(self, event):
+        self.search()
 
     def search(self):
         # determines concordance settings
@@ -208,7 +212,7 @@ class GUI:
             if type(q_item) is Concordance:
                 # creates record of what window the results get added to
                 if not self.conc_windows.get(q_item.id, False):
-                    self.conc_windows[q_item.id] = ConcWindow(self.root, q_item.query, id=q_item.id, save=self.save)
+                    self.conc_windows[q_item.id] = ConcWindow(self.root, q_item.query, self.corpus, id=q_item.id, save=self.save)
 
                 # Stops process if the window has been closed
                 elif not tk.Toplevel.winfo_exists(self.conc_windows[q_item.id]):
@@ -228,8 +232,9 @@ class GUI:
 
 
                 for i, indices in enumerate(q_item.center_inds):
-                    self.conc_windows[q_item.id].center_inds[q_item.line_s + i] = indices
-                    print(q_item.line_s + i, indices)
+
+                    self.conc_windows[q_item.id].center_inds.append(indices)
+                    self.conc_windows[q_item.id].text_locs.append(q_item.text_locs[i])
 
             elif type(q_item) is Message:
                 self.msg(q_item)

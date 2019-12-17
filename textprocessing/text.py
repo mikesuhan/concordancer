@@ -19,11 +19,10 @@ class Text:
              'capt.', 'cmdr.', 'col.', 'cpl.', 'sgt.', 'st.', 'ave.', 'rd.', 'pl.', 'blvd.', 'mt.', 'sq.', 'co.', 'inc.', \
              'ltd.', 'est.', 'inst.', 'etc.'
 
-    def __init__(self, data=None, filepath=None, category=None, filename=None, io=None):
+    def __init__(self, data=None, filepath=None, io=None, id=None):
         self.error = False
-        self.filename = filename if filename else filepath
         self.filepath = filepath
-        self.category = category
+        self.id = id
 
         if io:
             if filepath.endswith('.docx'):
@@ -57,9 +56,6 @@ class Text:
 
         if type(self.text) == bytes:
             self.text = self.text.decode()
-
-        if not self.category:
-            self.category = 'Uncategorized'
 
     def __repr__(self):
         return self.text
@@ -148,7 +144,7 @@ class Text:
             'right_context': right_context
                 }
 
-    def concordance(self, substring, tokens_left=5, tokens_right=5, id=None, regexp=False):
+    def concordance(self, substring, tokens_left=5, tokens_right=5, conc_id=None, regexp=False):
         if 4 > tokens_left:
             left_max = 10
         elif 7 > tokens_left:
@@ -160,7 +156,7 @@ class Text:
 
         substring_indices = finditer(r'\b' + substring + r'\b', self.text, IGNORECASE)
         #conc_lines = []
-        c = Concordance(substring, pad_left=left_max, id=id)
+        c = Concordance(substring, pad_left=left_max, text_i=self.id, id=conc_id)
         for substring_index in substring_indices:
             substring_left, substring_right = substring_index.span()
             conc_left = substring_left - 100 if substring_left - 100 > 0 else 0
@@ -172,11 +168,9 @@ class Text:
                 'right': self.word_tokenize(self.text[substring_right:conc_right])[:-1][:tokens_right] if tokens_right else [],
                 'substring_left': substring_left,
                 'substring_right': substring_right,
-                'name': self.filename,
-                'category': self.category,
+                'name': self.filepath,
             }
 
-            #conc_lines.append(conc_line)
             c.add(conc_line)
         return c
 
