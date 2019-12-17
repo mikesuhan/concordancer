@@ -123,17 +123,15 @@ class Corpus:
         results = {
             'results': sorted(((k, frequencies[k], dispersions[k]) for k in frequencies), key=lambda x: x[1], reverse=True),
             'tokens_n': tokens_n,
+            'texts_n': i + 1
             # 'types_n': types_n
         }
-
-        print('results', type(results), type(results) is dict, results)
 
         self.queue.put(results)
         m = 'Frequency list ready.'
         m = Message(m, tag='red')
         self.queue.put(m)
 
-
-
-
-
+    @staticmethod
+    def norm_to(n):
+        return 10 ** (len(str(n)) - 1)

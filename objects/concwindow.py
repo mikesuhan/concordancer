@@ -58,7 +58,7 @@ class ConcWindow(tk.Toplevel):
         t = self.corpus.texts[text_i].text
         text_window = TextWindow(self.parent, title=self.corpus.texts[text_i].filepath)
         text_window.text.tag_config('highlight', foreground='red')
-        text_window.text.tag_config('context', foreground='red', background='yellow')
+        text_window.text.tag_config('context', background='yellow')
 
         # gets indices from text that has been clicked on
         single_text_locs = [item for item in self.text_locs if item[-1] == text_i]

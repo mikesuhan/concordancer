@@ -1,5 +1,6 @@
 import tkinter as tk
 from objects.fancytext import FancyText
+import formatting as fm
 
 class TextWindow(tk.Toplevel):
 
@@ -9,8 +10,12 @@ class TextWindow(tk.Toplevel):
         self.title(title)
         top_frame = tk.Frame(self)
 
-        self.text = FancyText(top_frame, wrap=tk.WORD)
+        self.text = FancyText(top_frame, wrap=tk.WORD, padx=10, pady=5)
         self.text.pack( side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
+
+        self.text.tag_config('text_bg', background=fm.text_bg)
+        self.text.tag_config('white', background=fm.white)
+        self.text.tag_config('heading', font=fm.bold_text_font)
 
         self.vsb = tk.Scrollbar(top_frame)
         self.vsb.pack(side=tk.RIGHT, fill=tk.Y)
