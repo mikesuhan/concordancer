@@ -4,8 +4,11 @@ import formatting as fm
 class FancyText(tk.Text):
 
     def __init__(self, parent, *args, **kwargs):
-        tk.Text.__init__(self, parent, *args, **kwargs, background=fm.text_bg,
-                         font=fm.text_font, foreground=fm.text_fg, insertbackground=fm.text_fg)
+        tk.Text.__init__(self, parent, *args, **kwargs,
+                         background=fm.text_bg,
+                         font=fm.text_font,
+                         foreground=fm.text_fg,
+                         insertbackground=fm.text_fg)
         self.parent = parent
         self.popup_menu = tk.Menu(self, tearoff=0)
         self.popup_menu.add_command(label="Copy", command=self.copy_selected)

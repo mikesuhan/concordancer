@@ -5,6 +5,7 @@ from textprocessing.text import Text
 from textprocessing.matcher import is_match
 from textprocessing.concordance import  Concordance
 from textprocessing.substring import Substring
+from string import punctuation
 
 from message import Message
 
@@ -98,23 +99,23 @@ class Corpus:
 
         self.queue.put(m)
 
-    def freq_dist(self):
+    def freq_dist(self, punct=False):
         frequencies = defaultdict(int)
         dispersions = defaultdict(int)
         tokens_n = 0
         # types = []
         for i, text in enumerate(self.texts):
-            print(i)
             m = 'Processing text {:,} of {:,}.'.format(i + 1, len(self.texts))
             m = Message(m)
             self.queue.put(m)
 
-            tokens = text.re_word_tokenize(text.text)
+            tokens = text.word_tokenize(text.text, str.lower)
             for token in set(tokens):
-                n = tokens.count(token)
-                frequencies[token] += n
-                dispersions[token] += 1
-                tokens_n += n
+                if not punct and token not in punctuation:
+                    n = tokens.count(token)
+                    frequencies[token] += n
+                    dispersions[token] += 1
+                    tokens_n += n
             # types += list(fd.keys())
             # types = list(set(types))
 

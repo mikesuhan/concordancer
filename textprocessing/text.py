@@ -34,16 +34,17 @@ class Text:
 
         elif filepath:
             try:
-                if filepath.endswith('.txt'):
-                    with open(filepath, errors='ignore') as f:
-                        self.text = f.read().strip()
 
-                elif filepath.endswith('.docx'):
+
+                if filepath.endswith('.docx'):
                     self.text = read_docx(filepath)
 
                 elif filepath.endswith('.srt'):
                     with open(filepath, 'r') as f:
                         self.text = parse_srt(f.read())
+                else:
+                    with open(filepath, errors='ignore') as f:
+                        self.text = f.read().strip()
 
 
             except UnicodeDecodeError:
@@ -108,7 +109,7 @@ class Text:
         return tokens
 
     def re_word_tokenize(self, text):
-        return findall('\w+', text.lower())
+        return findall("[\w'\-]+", text.lower())
 
     def freq_dist(self):
         tokens = self.re_word_tokenize(self.text)
