@@ -157,7 +157,7 @@ class Text:
 
         substring_indices = finditer(r'\b' + substring + r'\b', self.text, IGNORECASE)
         #conc_lines = []
-        c = Concordance(substring, pad_left=left_max, text_i=self.id, id=conc_id)
+        c = Concordance(substring, pad_left=left_max, text_i=self.id, id=conc_id, tokens_left=tokens_left)
         for substring_index in substring_indices:
             substring_left, substring_right = substring_index.span()
             conc_left = substring_left - 100 if substring_left - 100 > 0 else 0
