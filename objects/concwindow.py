@@ -6,13 +6,14 @@ class ConcWindow(tk.Toplevel):
 
     max_center_len= 0
 
-    def __init__(self, parent, query, corpus, id, save,  *args, **kwargs):
+    def __init__(self, parent, query, corpus, id, save, tokens_left, *args, **kwargs):
         tk.Toplevel.__init__(self, parent, *args, **kwargs)
         self.query = query
         self.parent = parent
         self.corpus = corpus
         self.id = id
         self.title('Results for ' + query)
+        self.tokens_left = tokens_left
 
         self.center_inds = []
         self.text_locs = []
@@ -38,7 +39,7 @@ class ConcWindow(tk.Toplevel):
 
         menu_bar = tk.Menu(self)
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Save", command=lambda: save(self.text.get(1.0, tk.END), self.max_center_len))
+        file_menu.add_command(label="Save", command=lambda: save(self.text.get(1.0, tk.END), self.max_center_len, self.tokens_left))
         menu_bar.add_cascade(label="File", menu=file_menu)
         self.config(menu=menu_bar)
 

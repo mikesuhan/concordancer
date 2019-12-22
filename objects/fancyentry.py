@@ -3,9 +3,9 @@ import formatting as fm
 
 class FancyEntry(tk.Entry):
 
-    def __init__(self, parent, *args, **kwargs):
-        tk.Entry.__init__(self, parent, *args, **kwargs, background=fm.entry_bg, foreground=fm.entry_fg, insertbackground=fm.entry_fg,
-                          font=fm.entry_font, borderwidth=1)
+    def __init__(self, parent, background=fm.entry_bg, foreground=fm.entry_fg, font=fm.entry_font, *args, **kwargs):
+        tk.Entry.__init__(self, parent, *args, **kwargs, background=background, foreground=foreground, insertbackground=fm.entry_fg,
+                          font=font, borderwidth=1)
         self.parent = parent
         self.popup_menu = tk.Menu(self, tearoff=0)
         self.popup_menu.add_command(label="Cut", command=self.cut_selected)

@@ -1,5 +1,5 @@
 class Concordance:
-    def __init__(self, query, text_i=None, pad_left=10, id=None, line_s=None):
+    def __init__(self, query, text_i=None, pad_left=10, id=None, line_s=None, tokens_left=None):
         """
         Arguments:
             query: search term as a string
@@ -18,6 +18,7 @@ class Concordance:
         self.line_s = line_s
         self.line_e = None
         self.text_locs = []
+        self.tokens_left=tokens_left
 
     def max(self, i=1):
             return max(len(item[i].strip()) for item in self.lines)

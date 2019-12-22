@@ -12,6 +12,7 @@ from objects.fancybutton import FancyButton
 from objects.fancyentry import FancyEntry
 from objects.concwindow import ConcWindow
 from objects.textwindow import TextWindow
+from objects.saveoptions import SaveOptions
 from message import Message
 from textprocessing.msword import write_docx
 from textprocessing.html import write_html
@@ -28,6 +29,7 @@ class GUI:
     conc_id = 0
     freq_list_windows = {}
     freq_list_id = 0
+    prev_results = None
 
     def __init__(self):
         self.q = Queue()
@@ -48,10 +50,6 @@ class GUI:
         file_menu.add_command(label="Load files", command=self.load_files)
         file_menu.add_command(label="Load from URL", command=self.load_from_url)
         file_menu.add_command(label="Remove Files") #todo add this
-
-        file_menu.add_separator()
-
-        file_menu.add_command(label="Save", command=self.save)
 
         file_menu.add_separator()
 
@@ -118,9 +116,13 @@ class GUI:
 
 
 
-    def save(self, text, max_center_len):
-        file_types = (('Word', '.docx'), ('Excel', '.xlsx'), ('plaintext', '.txt'), ('tab-separated values', '.tsv'),
+    def save(self, text, max_center_len, tokens_left):
+        file_types = (('Word', '.docx'),
+                      ('Excel', '.xlsx'),
+                      ('plaintext', '.txt'),
+                      ('tab-separated values', '.tsv'),
                       ('html', '.html'))
+
         fp = filedialog.asksaveasfilename(filetypes=file_types, defaultextension='.docx')
         if fp.endswith(('.tsv', '.txt',)):
             with open(fp, 'w') as f:
@@ -134,6 +136,9 @@ class GUI:
 
         elif fp.endswith('.html'):
             write_html(fp, text)
+
+        elif fp.endswith('.xlsx'):
+            save_options = SaveOptions(self.root, fp, text, tokens_left, msg=self.msg)
 
     def search_kp(self, event):
         self.search()
@@ -212,7 +217,12 @@ class GUI:
             if type(q_item) is Concordance:
                 # creates record of what window the results get added to
                 if not self.conc_windows.get(q_item.id, False):
-                    self.conc_windows[q_item.id] = ConcWindow(self.root, q_item.query, self.corpus, id=q_item.id, save=self.save)
+                    self.conc_windows[q_item.id] = ConcWindow(self.root,
+                                                              q_item.query,
+                                                              self.corpus,
+                                                              id=q_item.id,
+                                                              save=self.save,
+                                                              tokens_left=q_item.tokens_left)
 
                 # Stops process if the window has been closed
                 elif not tk.Toplevel.winfo_exists(self.conc_windows[q_item.id]):
@@ -240,17 +250,75 @@ class GUI:
                 self.msg(q_item)
 
             elif type(q_item) is dict:
-                self.freq_list_windows[self.freq_list_id] = TextWindow(self.root)
-                header = '{w}\tFrequency\t\tDispersion\n\n'.format(w='Word'.ljust(20))
-                self.freq_list_windows[self.freq_list_id].text.insert(tk.END, header)
-                for w, f, d in q_item['results']:
-                    item = '{}\t{:<9,}\t\t{:,}\n'.format(w.ljust(20), f, d)
-                    self.freq_list_windows[self.freq_list_id].text.insert(tk.END, item)
+                self.make_freq_list(q_item)
 
             self.root.after(100, self.process_queue)
 
         except queue.Empty:
             pass
+
+    def make_freq_list(self, q_item):
+        self.freq_list_windows[self.freq_list_id] = TextWindow(self.root, wrap='none')
+        norm_to = self.corpus.norm_to(q_item['tokens_n'])
+        tokens_n = q_item['tokens_n']
+
+        t = self.freq_list_windows[self.freq_list_id].text
+        tw = self.freq_list_windows[self.freq_list_id]
+
+        norm_heading = 'Per {nf:,}'.format(nf=norm_to)
+
+        heading = 'Rank', 'Word', 'Frequency', 'Per', 'Dispersion'
+
+
+        t.insert(tk.END, 'Rank', 'heading')
+        t.insert(tk.END, '\t')
+        t.insert(tk.END, 'Word'.ljust(20), 'heading')
+        t.insert(tk.END, '\t')
+        t.insert(tk.END, 'Frequency', 'heading')
+        t.insert(tk.END, '\t\t')
+        t.insert(tk.END, norm_heading, 'heading')
+        t.insert(tk.END, '\t\t\t')
+        t.insert(tk.END, 'Dispersion', 'heading')
+        t.insert(tk.END, '\t%\n\n')
+
+
+
+        pad_len = len(norm_heading)
+
+        backgrounds = ['white', 'text_bg']
+
+        tw.results = {
+            'norm_heading': norm_heading,
+            'results': [],
+            'complete': False,
+            'heading': heading
+        }
+
+        prev_f = q_item['results'][0][1]
+        r = 1
+
+        for i, (w, f, d) in enumerate(q_item['results']):
+            nf = f / tokens_n * norm_to
+            dp = d / q_item['texts_n'] * 100
+
+            if prev_f > f:
+                r += 1
+                prev_f = f
+
+
+            item = '{rank:,}\t{word}\t{freq:<9,}\t\t{normed_freq:<{pad},.2f}\t\t\t{disp:,}\t{disp_p:,.2f}%\n'.format(
+                rank=r,
+                word=w.ljust(20),
+                freq=f,
+                pad=pad_len,
+                normed_freq=nf,
+                disp=d,
+                disp_p=dp
+            )
+            t.insert(tk.END, item, fm.list_bgs[i % 2])
+            tw.results['results'].append([r, w, f, nf, d, dp, item])
+
+        tw.results['complete'] = True
 
     def clear_queue(self):
         try:
