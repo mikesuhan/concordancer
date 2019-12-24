@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-
 from re import finditer, IGNORECASE, sub, findall
-# from mammoth import convert_to_html
 from textprocessing.srt import parse_srt
 
 from textprocessing.concordance import Concordance
@@ -19,10 +17,14 @@ class Text:
              'capt.', 'cmdr.', 'col.', 'cpl.', 'sgt.', 'st.', 'ave.', 'rd.', 'pl.', 'blvd.', 'mt.', 'sq.', 'co.', 'inc.', \
              'ltd.', 'est.', 'inst.', 'etc.'
 
-    def __init__(self, data=None, filepath=None, io=None, id=None):
+    def __init__(self, data=None, filepath=None, io=None, id=None, cache_tokens=True):
         self.error = False
         self.filepath = filepath
         self.id = id
+
+        self.cached_tokens = []
+        self.cache_tokens = cache_tokens
+        self.tokens_n = None
 
         if io:
             if filepath.endswith('.docx'):
@@ -57,6 +59,7 @@ class Text:
 
         if type(self.text) == bytes:
             self.text = self.text.decode()
+
 
     def __repr__(self):
         return self.text
@@ -106,7 +109,20 @@ class Text:
                     tokens.insert(i + 1, tokens[i][-len(cont):])
                     tokens[i] = tokens[i][:-len(cont)]
 
+        if self.cache_tokens:
+            self.cached_tokens = tokens
+
+        self.tokens_n = len(tokens)
         return tokens
+
+    def ngrams(self, n, use_cache=True):
+        if use_cache and self.cached_tokens:
+            tokens = self.cached_tokens
+        else:
+            tokens = self.word_tokenize(self.text, str.lower)
+
+        for i, token in enumerate(tokens[:-n+1]):
+            yield tuple(tokens[i:i+n])
 
     def re_word_tokenize(self, text):
         return findall("[\w'\-]+", text.lower())

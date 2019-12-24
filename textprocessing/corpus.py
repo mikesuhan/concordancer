@@ -1,15 +1,20 @@
 from zipfile import ZipFile
 from io import BytesIO
+from operator import itemgetter
 from collections import defaultdict
 from textprocessing.text import Text
-from textprocessing.matcher import is_match
-from textprocessing.concordance import  Concordance
 from textprocessing.substring import Substring
+from textprocessing.result import Result
 from string import punctuation
 
 from message import Message
 
+punctuation += '”“’‘—'
+
 class Corpus:
+
+    text_proc_msg = 'Processing text {:,} of {:,}.'
+
     def __init__(self, queue):
         self.queue = queue
         self.text_paths = []
@@ -57,7 +62,6 @@ class Corpus:
         word_count = 0
         m = Message('Starting concordance process.')
         self.queue.put(m)
-        print('conc_id', conc_id)
 
         query = Substring(query).regexp_substring
         lines_n = 0
@@ -99,15 +103,69 @@ class Corpus:
 
         self.queue.put(m)
 
-    def freq_dist(self, punct=False):
+    def ngram_dist(self, min_n, max_n, r_id, min_freq=5):
+        frequencies = defaultdict(int)
+        dispersions = defaultdict(list)
+        tokens_n = 0
+        max_len = 0
+
+        for i, text in enumerate(self.texts):
+            m = self.text_proc_msg.format(i + 1, len(self.texts))
+            m = Message(m)
+            self.queue.put(m)
+
+
+            for n in range(min_n, max_n + 1):
+                for ngram in text.ngrams(n):
+                    ngram = ' '.join(ngram)
+                    if len(ngram) > max_len:
+                        max_len = len(ngram)
+                    frequencies[ngram] += 1
+                    dispersions[ngram].append(i)
+
+            tokens_n += text.tokens_n
+
+        nt = self.norm_to(tokens_n)
+        rank = 1
+        results = []
+
+        for i, (key, val) in enumerate(sorted(((k, frequencies[k]) for k in frequencies), key=itemgetter(1), reverse=True)):
+            if min_freq > val:
+                break
+
+            if i == 0:
+                prev_freq = val
+            elif prev_freq > val:
+                prev_freq = val
+                rank += 1
+
+            result = Result(r_id,
+                            i,
+                            rank,
+                            key,
+                            val,
+                            len(set(dispersions[key])),
+                            tokens_n, norm_to=nt,
+                            rtype='Ngrams',
+                            max_len=35)
+            results.append(result)
+            if len(results) == 100:
+                self.queue.put(results)
+                results = []
+
+        if results:
+            self.queue.put(results)
+
+    def freq_dist(self, r_id, punct=False, min_freq=0):
         frequencies = defaultdict(int)
         dispersions = defaultdict(int)
         tokens_n = 0
         # types = []
         for i, text in enumerate(self.texts):
-            m = 'Processing text {:,} of {:,}.'.format(i + 1, len(self.texts))
+            m = self.text_proc_msg.format(i + 1, len(self.texts))
             m = Message(m)
             self.queue.put(m)
+            max_len = 0
 
             tokens = text.word_tokenize(text.text, str.lower)
             for token in set(tokens):
@@ -116,22 +174,40 @@ class Corpus:
                     frequencies[token] += n
                     dispersions[token] += 1
                     tokens_n += n
-            # types += list(fd.keys())
-            # types = list(set(types))
+                    if len(token) > max_len:
+                        max_len = len(token)
 
-        # types_n = len(types)
+        nt = self.norm_to(tokens_n)
+        rank = 1
+        results = []
 
-        results = {
-            'results': sorted(((k, frequencies[k], dispersions[k]) for k in frequencies), key=lambda x: x[1], reverse=True),
-            'tokens_n': tokens_n,
-            'texts_n': i + 1
-            # 'types_n': types_n
-        }
+        for i, (key, val) in enumerate(sorted(((k, frequencies[k]) for k in frequencies), key=itemgetter(1), reverse=True)):
+            if i == 0:
+                prev_freq = val
+            elif prev_freq > val:
+                prev_freq = val
+                rank += 1
 
-        self.queue.put(results)
-        m = 'Frequency list ready.'
-        m = Message(m, tag='red')
-        self.queue.put(m)
+            if min_freq > val:
+                break
+            result = Result(r_id,
+                            i,
+                            rank,
+                            key,
+                            val,
+                            dispersions[key],
+                            tokens_n,
+                            norm_to=nt,
+                            rtype='Tokens',
+                            max_len=20)
+
+            results.append(result)
+            if len(results) == 100:
+                self.queue.put(results)
+                results = []
+        if results:
+            self.queue.put(results)
+
 
     @staticmethod
     def norm_to(n):

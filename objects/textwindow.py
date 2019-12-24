@@ -1,6 +1,8 @@
 import tkinter as tk
+from operator import attrgetter
 from objects.fancytext import FancyText
 import formatting as fm
+from textprocessing.result import Result
 
 class TextWindow(tk.Toplevel):
 
@@ -8,8 +10,11 @@ class TextWindow(tk.Toplevel):
         tk.Toplevel.__init__(self, parent, *args, **kwargs)
         self.parent = parent
         self.title(title)
-        self.results = None
+        # self.results = None
+        self.results = []
+        self.complete = True
         self.order = [True, False, True, True, False]
+        self.rows_n = 0
 
         top_frame = tk.Frame(self)
 
@@ -31,8 +36,14 @@ class TextWindow(tk.Toplevel):
 
         top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
 
+    def add_result(self, result):
+
+        self.text.insert(tk.END, result.row(), fm.list_bgs[self.rows_n % 2])
+        self.results.append(result)
+        self.rows_n += 1
+
     def heading_click(self, event, tag='heading'):
-        if self.results['complete']:
+        if self.complete:
             # get the index of the mouse click
             index = self.text.index("@%s,%s" % (event.x, event.y))
 
@@ -45,12 +56,13 @@ class TextWindow(tk.Toplevel):
                 if self.text.compare(start, '<=', index) and self.text.compare(index, '<', end):
                     # return string between tag start and end
                     clicked_heading = self.text.get(start, end)
-                    for i, h in enumerate(self.results['heading']):
+                    for i, h in enumerate(self.results[0].heading()):
+                        print(i, h)
                         if clicked_heading.startswith(h):
                             self.text.delete(2.0, tk.END)
                             self.text.insert(tk.END, '\n\n')
                             self.order[i] = not self.order[i]
-                            for k, item in enumerate(sorted(self.results['results'], key=lambda x: x[i], reverse=self.order[i])):
-                                self.text.insert(tk.END, item[-1], fm.list_bgs[k % 2])
+                            for k, res in enumerate(sorted(self.results, key=attrgetter(Result.attrs[i]), reverse=self.order[i])):
+                                self.text.insert(tk.END, res.row(), fm.list_bgs[k % 2])
                             break
 
