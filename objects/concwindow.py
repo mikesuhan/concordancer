@@ -6,31 +6,45 @@ class ConcWindow(tk.Toplevel):
 
     max_center_len= 0
 
-    def __init__(self, parent, query, corpus, id, save, tokens_left, *args, **kwargs):
-        tk.Toplevel.__init__(self, parent, *args, **kwargs)
+    def __init__(self, parent, query, corpus, id, save, tokens_left, instructions=None, *args, **kwargs):
+        tk.Toplevel.__init__(self, parent.root, *args, **kwargs)
         self.query = query
         self.parent = parent
         self.corpus = corpus
         self.id = id
         self.title('Results for ' + query)
         self.tokens_left = tokens_left
-
+        self.geometry('1200x550')
         self.center_inds = []
         self.text_locs = []
 
         self.bind('<Double-Button-1>', self.db_click)
 
-        top_frame = tk.Frame(self)
+        inst = self.parent.instructions.get('Concordance Window')
 
-        self.text = FancyText(top_frame, wrap='none')
-        self.text.pack( side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
+        if inst:
 
-        vsb = tk.Scrollbar(top_frame)
+            instructions_frame = tk.Frame(self)
+            self.instructions_lbl = tk.Label(instructions_frame,
+                                         text=inst,
+                                         justify=tk.LEFT)
+
+            self.instructions_lbl.bind("<Configure>", self.set_label_wrap)
+            self.instructions_lbl.pack(side=tk.LEFT, expand=tk.YES, fill=tk.X)
+            instructions_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.X)
+
+
+        conc_frame = tk.Frame(self)
+
+        self.text = FancyText(conc_frame, wrap='none')
+        self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
+
+        vsb = tk.Scrollbar(conc_frame)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
         vsb.config(command=self.text.yview)
         self.text.config(yscrollcommand=vsb.set)
 
-        top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
+        conc_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
 
         hsb = tk.Scrollbar(self, orient='horizontal')
         hsb.pack(fill=tk.X, side=tk.BOTTOM)
@@ -42,6 +56,10 @@ class ConcWindow(tk.Toplevel):
         file_menu.add_command(label="Save", command=lambda: save(self.text.get(1.0, tk.END), self.max_center_len, self.tokens_left))
         menu_bar.add_cascade(label="File", menu=file_menu)
         self.config(menu=menu_bar)
+
+    def set_label_wrap(self, event):
+        wraplength = event.width - 12  # 12, to account for padding and borderwidth
+        event.widget.configure(wraplength=wraplength)
 
     def db_click(self, event):
 
@@ -57,7 +75,7 @@ class ConcWindow(tk.Toplevel):
 
     def show_context(self, left_i, right_i, text_i):
         t = self.corpus.texts[text_i].text
-        text_window = TextWindow(self.parent, title=self.corpus.texts[text_i].filepath)
+        text_window = TextWindow(self.parent.root, title=self.corpus.texts[text_i].filepath)
         text_window.text.tag_config('highlight', foreground='red')
         text_window.text.tag_config('context', background='yellow')
 

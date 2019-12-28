@@ -116,18 +116,31 @@ class Corpus:
 
 
             for n in range(min_n, max_n + 1):
-                for ngram in text.ngrams(n):
-                    ngram = ' '.join(ngram)
-                    if len(ngram) > max_len:
-                        max_len = len(ngram)
-                    frequencies[ngram] += 1
-                    dispersions[ngram].append(i)
+                if n == 1:
+                    for token in text.word_tokenize(text.text, str.lower):
+
+                        if len(token) > max_len:
+                            max_len = len(token)
+                        frequencies[token] += 1
+                        dispersions[token].append(i)
+                if n > 1:
+                    for ngram in text.ngrams(n):
+                        ngram = ' '.join(ngram)
+                        if len(ngram) > max_len:
+                            max_len = len(ngram)
+                        frequencies[ngram] += 1
+                        dispersions[ngram].append(i)
 
             tokens_n += text.tokens_n
 
         nt = self.norm_to(tokens_n)
         rank = 1
         results = []
+
+        if min_n == 1 and max_n == 1:
+            rtype = 'Tokens'
+        else:
+            rtype = 'Ngrams'
 
         for i, (key, val) in enumerate(sorted(((k, frequencies[k]) for k in frequencies), key=itemgetter(1), reverse=True)):
             if min_freq > val:
@@ -146,7 +159,7 @@ class Corpus:
                             val,
                             len(set(dispersions[key])),
                             tokens_n, norm_to=nt,
-                            rtype='Ngrams',
+                            rtype=rtype,
                             max_len=35)
             results.append(result)
             if len(results) == 100:
@@ -168,6 +181,7 @@ class Corpus:
             max_len = 0
 
             tokens = text.word_tokenize(text.text, str.lower)
+
             for token in set(tokens):
                 if not punct and token not in punctuation:
                     n = tokens.count(token)

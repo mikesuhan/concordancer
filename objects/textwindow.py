@@ -3,11 +3,12 @@ from operator import attrgetter
 from objects.fancytext import FancyText
 import formatting as fm
 from textprocessing.result import Result
+from objects.instructions import Instructions
 
 class TextWindow(tk.Toplevel):
 
-    def __init__(self, parent, title='', wrap=tk.WORD, *args, **kwargs):
-        tk.Toplevel.__init__(self, parent, *args, **kwargs)
+    def __init__(self, parent, view=None, title='', wrap=tk.WORD, *args, **kwargs):
+        tk.Toplevel.__init__(self, parent.root, *args, **kwargs)
         self.parent = parent
         self.title(title)
         # self.results = None
@@ -16,10 +17,24 @@ class TextWindow(tk.Toplevel):
         self.order = [True, False, True, True, False]
         self.rows_n = 0
 
+        inst = self.parent.instructions.get(view)
+
+        if inst:
+
+            instructions_frame = tk.Frame(self)
+            self.instructions_lbl = tk.Label(instructions_frame,
+                                         text=inst,
+                                         justify=tk.LEFT)
+
+            self.instructions_lbl.bind("<Configure>", self.set_label_wrap)
+            self.instructions_lbl.pack(side=tk.LEFT, expand=tk.YES, fill=tk.X)
+            instructions_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.X)
+
+
         top_frame = tk.Frame(self)
 
         self.text = FancyText(top_frame, wrap=wrap, padx=10, pady=5)
-        self.text.pack( side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
+        self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
 
         self.text.tag_config('text_bg', background=fm.text_bg)
         self.text.tag_config('white', background=fm.white)
@@ -35,6 +50,10 @@ class TextWindow(tk.Toplevel):
         self.text.config(yscrollcommand=self.vsb.set)
 
         top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
+
+    def set_label_wrap(self, event):
+        wraplength = event.width - 12  # 12, to account for padding and borderwidth
+        event.widget.configure(wraplength=wraplength)
 
     def add_result(self, result):
 

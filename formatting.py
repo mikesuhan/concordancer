@@ -14,6 +14,9 @@ list_bgs = ['white', 'text_bg']
 
 entry_font = ('Courier', 15)
 text_font = ('Courier', 11)
+status_font = ('Verdana', 10)
+instructions_font = ('Verdana', 12)
 bold_text_font = ('Courier', 11, 'bold')
 button_font = ('Courier', 11)
 
+geometry = '800x560'

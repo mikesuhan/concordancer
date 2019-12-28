@@ -24,7 +24,7 @@ class Text:
 
         self.cached_tokens = []
         self.cache_tokens = cache_tokens
-        self.tokens_n = None
+        self.tokens_n = 0
 
         if io:
             if filepath.endswith('.docx'):

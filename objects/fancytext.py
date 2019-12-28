@@ -3,11 +3,11 @@ import formatting as fm
 
 class FancyText(tk.Text):
 
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, background=fm.text_bg, font=fm.text_font, foreground=fm.text_fg, *args, **kwargs):
         tk.Text.__init__(self, parent, *args, **kwargs,
-                         background=fm.text_bg,
-                         font=fm.text_font,
-                         foreground=fm.text_fg,
+                         background=background,
+                         font=font,
+                         foreground=foreground,
                          insertbackground=fm.text_fg)
         self.parent = parent
         self.popup_menu = tk.Menu(self, tearoff=0)
