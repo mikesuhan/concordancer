@@ -5,17 +5,24 @@ import queue
 from time import gmtime, strftime
 
 import formatting as fm
+
 from textprocessing.corpus import Corpus
 from textprocessing.concordance import Concordance
+from textprocessing.result import Result
+from textprocessing.msword import write_docx
+from textprocessing.html import write_html
+
 from objects.fancytext import FancyText
 from objects.fancybutton import FancyButton
 from objects.fancyentry import FancyEntry
 from objects.concwindow import ConcWindow
 from objects.textwindow import TextWindow
 from objects.saveoptions import SaveOptions
+from objects.instructions import Instructions
+from objects.instructionswindow import InstructionsWindow
+
 from message import Message
-from textprocessing.msword import write_docx
-from textprocessing.html import write_html
+
 
 class GUI:
 
@@ -35,10 +42,11 @@ class GUI:
         self.q = Queue()
         self.root = tk.Tk()
         self.root.minsize(300, 200)
-        self.root.geometry('600x300')
+        self.root.geometry(fm.geometry)
+        self.instructions = Instructions()
 
         status_frame = tk.Frame()
-        self.status_text = FancyText(status_frame, wrap=tk.WORD)
+        self.status_text = FancyText(status_frame, wrap=tk.WORD, background=fm.white, font=fm.instructions_font)
         self.status_text.tag_config('red', foreground='red')
         self.status_var = tk.StringVar()
 
@@ -61,9 +69,15 @@ class GUI:
         menu_bar.add_cascade(label="File", menu=file_menu)
 
         # Tools menu
-        make_menu = tk.Menu(menu_bar, tearoff=0)
-        make_menu.add_command(label='Frequency list', command=self.freq_list)
-        menu_bar.add_cascade(label='Make', menu=make_menu)
+        list_menu = tk.Menu(menu_bar, tearoff=0)
+        list_menu.add_command(label='Word Frequency List', command=self.freq_list)
+        list_menu.add_command(label='Ngram Frequency List', command=self.ngram_freq_list)
+        menu_bar.add_cascade(label='List', menu=list_menu)
+
+
+        settings_menu = tk.Menu(menu_bar, tearoff=0)
+        settings_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
+        menu_bar.add_cascade(label='Settings', menu=settings_menu)
 
         self.root.config(menu=menu_bar, background=fm.dark_bg)
 
@@ -87,7 +101,7 @@ class GUI:
 
         self.root.bind('<Return>', self.search_kp)
 
-        search_frame.pack(expand=tk.YES, side=tk.TOP, fill=tk.X)
+        search_frame.pack(expand=tk.NO, side=tk.TOP, fill=tk.X)
 
         # status area
         self.status_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.BOTH)
@@ -100,7 +114,24 @@ class GUI:
         self.status_text.config(yscrollcommand=vsb.set)
 
 
+        self.status_entry = FancyEntry(self.root, background=fm.text_bg, font=fm.status_font)
+        self.status_entry.pack(side=tk.BOTTOM, expand=tk.NO, fill=tk.BOTH)
+
+
         tk.mainloop()
+
+    def ngram_freq_list(self):
+        if self.corpus is None or len(self.corpus.texts) == 0:
+            m = Message('You must load texts before making a frequency list. Select "File > Load files" to load texts.',
+                        tag='red')
+            self.msg(m)
+        else:
+
+            p = Process(target=self.corpus.ngram_dist, args=(4, 4, self.freq_list_id))
+            p.start()
+            self.freq_list_processes.append(p)
+            self.freq_list_id += 1
+            self.root.after(100, self.process_queue)
 
     def freq_list(self):
         if self.corpus is None or len(self.corpus.texts) == 0:
@@ -109,9 +140,11 @@ class GUI:
             self.msg(m)
 
         else:
-            p = Process(target=self.corpus.freq_dist)
+
+            p = Process(target=self.corpus.ngram_dist, args=(1, 1, self.freq_list_id,))
             p.start()
             self.freq_list_processes.append(p)
+            self.freq_list_id += 1
             self.root.after(100, self.process_queue)
 
 
@@ -160,13 +193,6 @@ class GUI:
             self.conc_right_entry.delete(0, tk.END)
             self.conc_right_entry.insert(0, self.default_conc_length)
 
-
-        # stops additional results from being processed
-        """
-        if self.conc_process is not None:
-            self.clear_queue()
-        """
-
         p = Process(target=self.corpus.concordance, args=(self.search_var.get(), conc_left, conc_right, self.conc_id))
         self.conc_processes.append(p)
         self.conc_id += 1
@@ -179,6 +205,10 @@ class GUI:
         self.search_entry.delete(0, tk.END)
         self.status_text.delete(1.0, tk.END)
         self.corpus = None
+
+    def open_instructios_window(self):
+        InstructionsWindow(self.root, self.instructions)
+
 
     def load_from_url(self):
         pass
@@ -201,7 +231,9 @@ class GUI:
             m = m.message
 
         m = '[{d}] {m}'.format(d=strftime("%Y-%m-%d %H:%M:%S", gmtime()), m=m)
-        self.status_text.insert(1.0, m + '\n', tag)
+        self.status_entry.delete(0, tk.END)
+        self.status_entry.insert(0, m)
+
 
     def process_queue(self):
         for p in self.conc_processes + self.freq_list_processes:
@@ -217,7 +249,7 @@ class GUI:
             if type(q_item) is Concordance:
                 # creates record of what window the results get added to
                 if not self.conc_windows.get(q_item.id, False):
-                    self.conc_windows[q_item.id] = ConcWindow(self.root,
+                    self.conc_windows[q_item.id] = ConcWindow(self,
                                                               q_item.query,
                                                               self.corpus,
                                                               id=q_item.id,
@@ -249,76 +281,35 @@ class GUI:
             elif type(q_item) is Message:
                 self.msg(q_item)
 
-            elif type(q_item) is dict:
-                self.make_freq_list(q_item)
+
+            elif type(q_item) is list and type(q_item[0]) is Result:
+                if q_item[0].r_id not in self.freq_list_windows.keys():
+                    if q_item[0].rtype == 'Tokens':
+                        view = 'Word List Window'
+                    elif q_item[0].rtype == 'Ngrams':
+                        view = 'Ngrams List Window'
+                    else:
+                        view = ''
+
+                    print('v', view)
+
+                    self.freq_list_windows[q_item[0].r_id] = TextWindow(self, view=view, wrap='none')
+
+                    for i, heading in enumerate(q_item[0].heading()):
+                        self.freq_list_windows[q_item[0].r_id].text.insert(tk.END, heading, 'heading')
+                        if len(heading) - 1 > i:
+                            self.freq_list_windows[q_item[0].r_id].text.insert(tk.END, q_item[0].delimiter)
+
+                    self.freq_list_windows[q_item[0].r_id].text.insert(tk.END, '\n\n')
+
+                for result in q_item:
+                    self.freq_list_windows[q_item[0].r_id].add_result(result)
+
 
             self.root.after(100, self.process_queue)
 
         except queue.Empty:
             pass
-
-    def make_freq_list(self, q_item):
-        self.freq_list_windows[self.freq_list_id] = TextWindow(self.root, wrap='none')
-        norm_to = self.corpus.norm_to(q_item['tokens_n'])
-        tokens_n = q_item['tokens_n']
-
-        t = self.freq_list_windows[self.freq_list_id].text
-        tw = self.freq_list_windows[self.freq_list_id]
-
-        norm_heading = 'Per {nf:,}'.format(nf=norm_to)
-
-        heading = 'Rank', 'Word', 'Frequency', 'Per', 'Dispersion'
-
-
-        t.insert(tk.END, 'Rank', 'heading')
-        t.insert(tk.END, '\t')
-        t.insert(tk.END, 'Word'.ljust(20), 'heading')
-        t.insert(tk.END, '\t')
-        t.insert(tk.END, 'Frequency', 'heading')
-        t.insert(tk.END, '\t\t')
-        t.insert(tk.END, norm_heading, 'heading')
-        t.insert(tk.END, '\t\t\t')
-        t.insert(tk.END, 'Dispersion', 'heading')
-        t.insert(tk.END, '\t%\n\n')
-
-
-
-        pad_len = len(norm_heading)
-
-        backgrounds = ['white', 'text_bg']
-
-        tw.results = {
-            'norm_heading': norm_heading,
-            'results': [],
-            'complete': False,
-            'heading': heading
-        }
-
-        prev_f = q_item['results'][0][1]
-        r = 1
-
-        for i, (w, f, d) in enumerate(q_item['results']):
-            nf = f / tokens_n * norm_to
-            dp = d / q_item['texts_n'] * 100
-
-            if prev_f > f:
-                r += 1
-                prev_f = f
-
-
-            item = '{rank:,}\t{word}\t{freq:<9,}\t\t{normed_freq:<{pad},.2f}\t\t\t{disp:,}\t{disp_p:,.2f}%\n'.format(
-                rank=r,
-                word=w.ljust(20),
-                freq=f,
-                pad=pad_len,
-                normed_freq=nf,
-                disp=d,
-                disp_p=dp
-            )
-            t.insert(tk.END, item, fm.list_bgs[i % 2])
-            tw.results['results'].append([r, w, f, nf, d, dp, item])
-
-        tw.results['complete'] = True
 
     def clear_queue(self):
         try:
