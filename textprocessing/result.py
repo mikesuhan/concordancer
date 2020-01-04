@@ -4,7 +4,7 @@ class Result:
     attrs = 'rank', 'tokens', 'freq', 'normed_freq', 'disp',
     delimiter = ' \t'
 
-    def __init__(self, r_id, i, rank, tokens, freq, disp, tokens_n, norm_to=1000, rtype='Tokens', max_len=20):
+    def __init__(self, r_id, i, rank, tokens, freq, normed_freq, disp, tokens_n, norm_to=1000, rtype='Tokens', max_len=20):
         self.r_id = r_id
         self.i = i
         self.rank = rank
@@ -15,7 +15,7 @@ class Result:
         self.max_len = max_len
         self.tokens_n = tokens_n
         self.norm_to = norm_to
-        self.normed_freq = freq / tokens_n * norm_to
+        self.normed_freq = normed_freq
 
 
 

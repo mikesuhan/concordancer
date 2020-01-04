@@ -75,7 +75,7 @@ class ConcWindow(tk.Toplevel):
 
     def show_context(self, left_i, right_i, text_i):
         t = self.corpus.texts[text_i].text
-        text_window = TextWindow(self.parent.root, title=self.corpus.texts[text_i].filepath)
+        text_window = TextWindow(self.parent, title=self.corpus.texts[text_i].filepath)
         text_window.text.tag_config('highlight', foreground='red')
         text_window.text.tag_config('context', background='yellow')
 

@@ -76,7 +76,6 @@ class TextWindow(tk.Toplevel):
                     # return string between tag start and end
                     clicked_heading = self.text.get(start, end)
                     for i, h in enumerate(self.results[0].heading()):
-                        print(i, h)
                         if clicked_heading.startswith(h):
                             self.text.delete(2.0, tk.END)
                             self.text.insert(tk.END, '\n\n')

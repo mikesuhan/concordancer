@@ -6,7 +6,7 @@ from textprocessing.text import Text
 from textprocessing.substring import Substring
 from textprocessing.result import Result
 from string import punctuation
-
+from re import findall
 from message import Message
 
 punctuation += '”“’‘—'
@@ -103,28 +103,25 @@ class Corpus:
 
         self.queue.put(m)
 
-    def ngram_dist(self, min_n, max_n, r_id, min_freq=5):
+    def ngram_dist(self, opts, r_id):
+        min_freq = 5
         frequencies = defaultdict(int)
         dispersions = defaultdict(list)
         tokens_n = 0
         max_len = 0
+
+        if findall('[*+|]', opts['filter']):
+            opts['filter'] = Substring(opts['filter'].strip())
+        else:
+            opts['filter'] = Text().word_tokenize(opts['filter'], str.lower)
 
         for i, text in enumerate(self.texts):
             m = self.text_proc_msg.format(i + 1, len(self.texts))
             m = Message(m)
             self.queue.put(m)
 
-
-            for n in range(min_n, max_n + 1):
-                if n == 1:
-                    for token in text.word_tokenize(text.text, str.lower):
-
-                        if len(token) > max_len:
-                            max_len = len(token)
-                        frequencies[token] += 1
-                        dispersions[token].append(i)
-                if n > 1:
-                    for ngram in text.ngrams(n):
+            for n in range(opts['ngrams']['min_len'], opts['ngrams']['max_len'] + 1):
+                    for ngram in text.ngrams(n, no_punct=opts['no_punct']['checked'], filter=opts['filter']):
                         ngram = ' '.join(ngram)
                         if len(ngram) > max_len:
                             max_len = len(ngram)
@@ -133,32 +130,70 @@ class Corpus:
 
             tokens_n += text.tokens_n
 
-        nt = self.norm_to(tokens_n)
+
+        if not opts['norm_rate']:
+            opts['norm_rate'] = self.norm_to(tokens_n)
+
         rank = 1
         results = []
 
-        if min_n == 1 and max_n == 1:
+        if opts['ngrams']['min_len'] == 1 and opts['ngrams']['max_len'] == 1:
             rtype = 'Tokens'
         else:
             rtype = 'Ngrams'
 
-        for i, (key, val) in enumerate(sorted(((k, frequencies[k]) for k in frequencies), key=itemgetter(1), reverse=True)):
-            if min_freq > val:
-                break
+        prev_freq = None
 
-            if i == 0:
-                prev_freq = val
-            elif prev_freq > val:
-                prev_freq = val
-                rank += 1
+        for i, (key, freq) in enumerate(sorted(((k, frequencies[k]) for k in frequencies), key=itemgetter(1), reverse=True)):
+            if opts['frequency']['min'] > freq:
+                break
+            elif opts['frequency']['max'] and freq > opts['frequency']['max']:
+                continue
+
+            if opts['dispersion']['checked']:
+                disp = len(set(dispersions[key]))
+                if opts['dispersion']['min'] > disp:
+                    continue
+                elif opts['dispersion']['max'] and disp > opts['dispersion']['max']:
+                    continue
+            else:
+                disp = None
+
+            if opts['rate']['checked']:
+                rate = freq / tokens_n * opts['norm_rate']
+                if opts['rate']['min'] > rate:
+                    break
+                elif opts['rate']['max'] and rate > opts['rate']['max']:
+                    continue
+            else:
+                rate = None
+
+            if opts['rank']['checked']:
+
+                if prev_freq is None:
+                    prev_freq = freq
+                elif prev_freq > freq:
+                    prev_freq = freq
+                    rank += 1
+
+                if opts['rank']['min'] > rank:
+                    continue
+                elif opts['rank']['max'] and rank > opts['rank']['max']:
+                    break
+
+            else:
+                rank = None
+
+
 
             result = Result(r_id,
                             i,
                             rank,
                             key,
-                            val,
-                            len(set(dispersions[key])),
-                            tokens_n, norm_to=nt,
+                            freq,
+                            rate,
+                            disp,
+                            tokens_n, norm_to=opts['norm_rate'],
                             rtype=rtype,
                             max_len=35)
             results.append(result)

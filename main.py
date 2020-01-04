@@ -11,6 +11,7 @@ from textprocessing.concordance import Concordance
 from textprocessing.result import Result
 from textprocessing.msword import write_docx
 from textprocessing.html import write_html
+from textprocessing.dictgetter import dictgetter
 
 from objects.fancytext import FancyText
 from objects.fancybutton import FancyButton
@@ -20,6 +21,7 @@ from objects.textwindow import TextWindow
 from objects.saveoptions import SaveOptions
 from objects.instructions import Instructions
 from objects.instructionswindow import InstructionsWindow
+from objects.ngramsoptionswindow import NgramsOptionsWindow
 
 from message import Message
 
@@ -69,15 +71,16 @@ class GUI:
         menu_bar.add_cascade(label="File", menu=file_menu)
 
         # Tools menu
-        list_menu = tk.Menu(menu_bar, tearoff=0)
-        list_menu.add_command(label='Word Frequency List', command=self.freq_list)
-        list_menu.add_command(label='Ngram Frequency List', command=self.ngram_freq_list)
-        menu_bar.add_cascade(label='List', menu=list_menu)
+        tools_menu = tk.Menu(menu_bar, tearoff=0)
+        tools_menu.add_command(label='List', command=self.word_list_options)
+        tools_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
+        menu_bar.add_cascade(label='Tools', menu=tools_menu)
 
-
+        """
         settings_menu = tk.Menu(menu_bar, tearoff=0)
         settings_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
         menu_bar.add_cascade(label='Settings', menu=settings_menu)
+        """
 
         self.root.config(menu=menu_bar, background=fm.dark_bg)
 
@@ -120,6 +123,28 @@ class GUI:
 
         tk.mainloop()
 
+    def word_list_options(self):
+        presets = {
+            'ngrams':
+                {'min_len': 1,
+                 'max_len': 1},
+            'no_punct': {
+                'label': 'Exclude punctuation.'
+            }
+        }
+
+        self.ngrams_options_window = NgramsOptionsWindow(self, presets=presets)
+
+    def ngrams_options(self):
+        presets = {
+            'frequency': {'min': 2},
+            'no_punct': {
+                'label': 'Exclude punctuation.'
+            }
+        }
+        self.ngrams_options_window = NgramsOptionsWindow(self, presets=presets)
+
+
     def ngram_freq_list(self):
         if self.corpus is None or len(self.corpus.texts) == 0:
             m = Message('You must load texts before making a frequency list. Select "File > Load files" to load texts.',
@@ -127,7 +152,14 @@ class GUI:
             self.msg(m)
         else:
 
-            p = Process(target=self.corpus.ngram_dist, args=(4, 4, self.freq_list_id))
+            options = self.ngrams_options_window.get_options()
+            self.ngrams_options_window.destroy()
+            self.ngrams_options_window.update()
+
+            p = Process(target=self.corpus.ngram_dist,
+                        args=(self.ngrams_options_window.options,
+                              self.freq_list_id)
+                        )
             p.start()
             self.freq_list_processes.append(p)
             self.freq_list_id += 1
@@ -141,7 +173,7 @@ class GUI:
 
         else:
 
-            p = Process(target=self.corpus.ngram_dist, args=(1, 1, self.freq_list_id,))
+            p = Process(target=self.corpus.ngram_dist, args=(None, self.freq_list_id,))
             p.start()
             self.freq_list_processes.append(p)
             self.freq_list_id += 1
@@ -290,8 +322,6 @@ class GUI:
                         view = 'Ngrams List Window'
                     else:
                         view = ''
-
-                    print('v', view)
 
                     self.freq_list_windows[q_item[0].r_id] = TextWindow(self, view=view, wrap='none')
 

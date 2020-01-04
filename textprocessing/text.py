@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-from re import finditer, IGNORECASE, sub, findall
+from re import finditer, IGNORECASE, sub, findall, match
 from textprocessing.srt import parse_srt
 
 from textprocessing.concordance import Concordance
 from textprocessing.msword import read_docx
-
+from textprocessing.substring import Substring
 
 
 class Text:
     contractions = ("n't", "'ll", "'d", "'s", "'re", "'ve", "'m")
-    punctuation = '!\,./:;?\\—'
+    punctuation = '-!\,./:;?\\—'
     symbols = '#$%&*+<=>@^_`|~'
     enclosers = '\'"«‹»›„‚“‟‘‛’”’"❛❜❟❝❞⹂〝〞〟＂{}[]()'
+    non_alphanumeric = punctuation + symbols + enclosers
     escapes = '\.^$*+?()[{|'
     titles = 'mr.', 'ms.', 'mrs.', 'mx.', 'jr.', 'sr.', 'rev.', 'fr.', 'br.', 'pr.', 'dr.', 'drs.', 'esq.', 'hon.', \
              'capt.', 'cmdr.', 'col.', 'cpl.', 'sgt.', 'st.', 'ave.', 'rd.', 'pl.', 'blvd.', 'mt.', 'sq.', 'co.', 'inc.', \
@@ -25,6 +26,8 @@ class Text:
         self.cached_tokens = []
         self.cache_tokens = cache_tokens
         self.tokens_n = 0
+
+        self.text = ''
 
         if io:
             if filepath.endswith('.docx'):
@@ -45,7 +48,7 @@ class Text:
                     with open(filepath, 'r') as f:
                         self.text = parse_srt(f.read())
                 else:
-                    with open(filepath, errors='ignore') as f:
+                    with open(filepath, errors='ignore', encoding='utf-8') as f:
                         self.text = f.read().strip()
 
 
@@ -115,14 +118,37 @@ class Text:
         self.tokens_n = len(tokens)
         return tokens
 
-    def ngrams(self, n, use_cache=True):
+    def ngrams(self, n, use_cache=True, no_punct=False, filter=None):
         if use_cache and self.cached_tokens:
             tokens = self.cached_tokens
         else:
             tokens = self.word_tokenize(self.text, str.lower)
 
-        for i, token in enumerate(tokens[:-n+1]):
-            yield tuple(tokens[i:i+n])
+        end = -1 if -n+1 == 0 else -n+1
+
+        if type(filter) == Substring:
+            for i, token in enumerate(tokens[:end]):
+                ngram = ' '.join(tokens[i:i+n])
+                if findall(filter.regexp_substring, ngram):
+                    yield tokens[i:i+n]
+        else:
+            flen = 0 if filter is None else len(filter)
+            for i, token in enumerate(tokens[:end]):
+                y = True
+                if no_punct or filter:
+                    for k, tok in enumerate(tokens[i:i+n]):
+                        if no_punct and tok in self.non_alphanumeric:
+                            y = False
+                            break
+                        elif filter and tokens[i:i+n][k:k+flen] == filter:
+                            y = True
+                            break
+                    else:
+                        if filter:
+                            y = False
+
+                if y:
+                    yield tuple(tokens[i:i+n])
 
     def re_word_tokenize(self, text):
         return findall("[\w'\-]+", text.lower())
