@@ -50,8 +50,7 @@ class GUI:
         status_frame = tk.Frame()
         self.status_text = FancyText(status_frame, wrap=tk.WORD, background=fm.white, font=fm.instructions_font)
         self.status_text.tag_config('red', foreground='red')
-        self.status_var = tk.StringVar()
-
+        self.status_text.insert(1.0, self.instructions.get('Main Window'))
         # Menu bar
         menu_bar = tk.Menu(self.root)
 
