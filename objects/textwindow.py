@@ -3,7 +3,6 @@ from operator import attrgetter
 from objects.fancytext import FancyText
 import formatting as fm
 from textprocessing.result import Result
-from objects.instructions import Instructions
 
 class TextWindow(tk.Toplevel):
 
