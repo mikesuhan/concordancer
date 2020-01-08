@@ -9,6 +9,7 @@ button_fg = '#000000'
 button_bg = '#F5F5F5'     # grey
 hl_bg = 'blue'
 hl_c = 'blue'
+gray_bg = '#40E0D0'
 
 list_bgs = ['white', 'text_bg']
 
@@ -20,4 +21,8 @@ instructions_font = ('Verdana', 12)
 bold_text_font = ('Courier', 11, 'bold')
 button_font = ('Courier', 11)
 
+
 geometry = '800x560'
+
+
+padx, pady = 5, 5

@@ -11,12 +11,13 @@ from textprocessing.concordance import Concordance
 from textprocessing.result import Result
 from textprocessing.msword import write_docx
 from textprocessing.html import write_html
-from textprocessing.dictgetter import dictgetter
 
 from objects.fancytext import FancyText
 from objects.fancybutton import FancyButton
 from objects.fancyentry import FancyEntry
+from objects.fancylistbox import FancyListbox
 from objects.concwindow import ConcWindow
+from objects.manuallyenterwindow import ManuallyEnterWindow
 from objects.textwindow import TextWindow
 from objects.saveoptions import SaveOptions
 from objects.instructions import Instructions
@@ -28,7 +29,6 @@ from message import Message
 
 class GUI:
 
-    corpus = None
     default_conc_length = '5'
     conc_processes = []
     save_process = None
@@ -41,13 +41,16 @@ class GUI:
     prev_results = None
 
     def __init__(self):
-        self.q = Queue()
+        self.queue = Queue()
         self.root = tk.Tk()
         self.root.minsize(300, 200)
-        self.root.geometry(fm.geometry)
+        self.root.geometry('1100x600')
+        self.corpus = Corpus(self.queue)
         self.instructions = Instructions()
 
-        status_frame = tk.Frame()
+        top_frame = tk.Frame(self.root)
+
+        status_frame = tk.Frame(top_frame)
         self.status_text = FancyText(status_frame, wrap=tk.WORD, background=fm.white, font=fm.instructions_font)
         self.status_text.tag_config('red', foreground='red')
         self.status_text.insert(1.0, self.instructions.get('Main Window'))
@@ -56,8 +59,8 @@ class GUI:
 
         # File menu on menu bar
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Load files", command=self.load_files)
-        file_menu.add_command(label="Load from URL", command=self.load_from_url)
+        file_menu.add_command(label="Load Files", command=self.load_files)
+        file_menu.add_command(label="Manually Enter Text", command=self.open_manually_enter_window)
         file_menu.add_command(label="Remove Files") #todo add this
 
         file_menu.add_separator()
@@ -75,16 +78,41 @@ class GUI:
         tools_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
         menu_bar.add_cascade(label='Tools', menu=tools_menu)
 
-        """
-        settings_menu = tk.Menu(menu_bar, tearoff=0)
-        settings_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
-        menu_bar.add_cascade(label='Settings', menu=settings_menu)
-        """
-
         self.root.config(menu=menu_bar, background=fm.dark_bg)
 
+
+        # File list
+
+        file_list_frame = tk.Frame(top_frame)
+        tk.Label(file_list_frame, text='File Manager').pack(side=tk.TOP, pady=4)
+
+        lb_frame = tk.Frame(file_list_frame)
+
+        self.file_list = FancyListbox(lb_frame,
+                                      width=40,
+                                      selectmode=tk.EXTENDED,
+                                      remove=self.remove,
+                                      open_text=self.open_text)
+        self.file_list.pack(expand=tk.YES, fill=tk.Y, side=tk.LEFT)
+        fl_vsb = tk.Scrollbar(lb_frame, orient=tk.VERTICAL)
+        fl_vsb.config(command=self.file_list.yview)
+        fl_vsb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.file_list.config(yscrollcommand=fl_vsb.set)
+
+        lb_frame.pack(expand=tk.YES, fill=tk.Y)
+
+        fl_btn_frame = tk.Frame(file_list_frame)
+        remove_text_btn = FancyButton(fl_btn_frame, text='Remove', command=self.remove)
+        remove_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
+        load_text_btn = FancyButton(fl_btn_frame, text='Load')
+        load_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
+        fl_btn_frame.pack(expand=tk.NO, fill=tk.X)
+
+        file_list_frame.pack(side=tk.LEFT, expand=tk.NO, fill=tk.Y)
+
         # search bar
-        search_frame = tk.Frame(self.root)
+        search_frame = tk.Frame(top_frame)
 
         self.conc_left_entry = FancyEntry(search_frame, width=2, justify=tk.CENTER)
         self.conc_left_entry.insert(0, self.default_conc_length)
@@ -115,12 +143,16 @@ class GUI:
         vsb.config(command=self.status_text.yview)
         self.status_text.config(yscrollcommand=vsb.set)
 
+        top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
 
-        self.status_entry = FancyEntry(self.root, background=fm.text_bg, font=fm.status_font)
-        self.status_entry.pack(side=tk.BOTTOM, expand=tk.NO, fill=tk.BOTH)
+        self.status_entry = FancyEntry(self.root, background='SystemButtonFace', font=fm.status_font)
+        self.status_entry.pack(side=tk.TOP, expand=tk.NO, fill=tk.X)
 
 
         tk.mainloop()
+
+    def open_manually_enter_window(self):
+        ManuallyEnterWindow(self)
 
     def word_list_options(self):
         presets = {
@@ -178,7 +210,23 @@ class GUI:
             self.freq_list_id += 1
             self.root.after(100, self.process_queue)
 
+    def open_text(self):
+        sel = self.file_list.curselection()
+        if len(sel) > 1:
+            self.msg('Too many texts selected. (Limit: 1)')
+        elif len(sel) == 0:
+            self.msg('No texts selected.')
+        else:
+            print(sel, len(self.corpus.texts))
+            tw = TextWindow(self, title=self.corpus.texts[sel[0]].title)
+            tw.text.insert(1.0, self.corpus.texts[sel[0]])
 
+    def remove(self):
+        texts = self.file_list.curselection()
+        for i in reversed(texts):
+            del self.corpus.texts[i]
+            self.file_list.delete(i)
+        self.msg('{} texts removed.'.format(len(texts)))
 
     def save(self, text, max_center_len, tokens_left):
         file_types = (('Word', '.docx'),
@@ -194,7 +242,7 @@ class GUI:
 
         elif fp.endswith('.docx'):
             self.save_process = Process(target=write_docx,
-                                args=(self.q, fp, text, max_center_len))
+                                args=(self.queue, fp, text, max_center_len))
             self.save_process.start()
             self.root.after(100, self.process_queue)
 
@@ -236,6 +284,7 @@ class GUI:
         self.search_entry.delete(0, tk.END)
         self.status_text.delete(1.0, tk.END)
         self.corpus = None
+        self.file_list.delete(0, tk.END)
 
     def open_instructios_window(self):
         InstructionsWindow(self.root, self.instructions)
@@ -248,8 +297,6 @@ class GUI:
         """Loads texts from local files."""
         filenames = filedialog.askopenfilenames()
 
-        if self.corpus is None:
-            self.corpus = Corpus(self.q)
 
         m = self.corpus.load_texts(*filenames)
         self.msg(m)
@@ -257,9 +304,14 @@ class GUI:
     def msg(self, m):
         tag = ''
         if type(m) == Message:
+            if m.added_texts:
+                for uf in m.added_texts:
+                    self.file_list.insert(tk.END, uf)
+
             if m.tag:
                 tag = m.tag
             m = m.message
+
 
         m = '[{d}] {m}'.format(d=strftime("%Y-%m-%d %H:%M:%S", gmtime()), m=m)
         self.status_entry.delete(0, tk.END)
@@ -276,7 +328,7 @@ class GUI:
             self.root.after(100, self.process_queue)
 
         try:
-            q_item = self.q.get(0)
+            q_item = self.queue.get(0)
             if type(q_item) is Concordance:
                 # creates record of what window the results get added to
                 if not self.conc_windows.get(q_item.id, False):
@@ -343,7 +395,7 @@ class GUI:
     def clear_queue(self):
         try:
             while True:
-                self.q.get_nowait()
+                self.queue.get_nowait()
         except queue.Empty:
             pass
 

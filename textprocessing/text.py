@@ -18,7 +18,7 @@ class Text:
              'capt.', 'cmdr.', 'col.', 'cpl.', 'sgt.', 'st.', 'ave.', 'rd.', 'pl.', 'blvd.', 'mt.', 'sq.', 'co.', 'inc.', \
              'ltd.', 'est.', 'inst.', 'etc.'
 
-    def __init__(self, data=None, filepath=None, io=None, id=None, cache_tokens=True):
+    def __init__(self, data=None, filepath=None, title=None, io=None, id=None, cache_tokens=True):
         self.error = False
         self.filepath = filepath
         self.id = id
@@ -28,6 +28,13 @@ class Text:
         self.tokens_n = 0
 
         self.text = ''
+
+        if title:
+            self.title = title
+        elif filepath:
+            self.title = filepath
+        else:
+            self.title = 'Text ' + id
 
         if io:
             if filepath.endswith('.docx'):

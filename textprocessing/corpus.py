@@ -29,6 +29,16 @@ class Corpus:
 
         return self.texts[self.i]
 
+    def load_string(self, str_input):
+        if not self.texts:
+            self.texts = []
+        self.texts.append(Text(data=str_input))
+        self.text_paths.append('Manually Entered Text')
+        m = Message('Manually input text loaded.')
+        self.queue.put(m)
+
+
+
     def load_texts(self, *text_paths):
         text_count = 0
         if not self.texts:
@@ -53,8 +63,8 @@ class Corpus:
             's' if text_count > 1 else ''
         )
 
-        return Message(m)
-
+        added_texts = [t.title for t in self.texts[-len(text_paths):]]
+        return Message(m, added_texts=added_texts)
 
 
     def concordance(self, query, left_len=5, right_len=5, conc_id=None, case_sensitive=False, limit=None):

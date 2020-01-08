@@ -16,9 +16,10 @@ class TextWindow(tk.Toplevel):
         self.order = [True, False, True, True, False]
         self.rows_n = 0
 
-        inst = self.parent.instructions.get(view)
+        if view is not None:
+            inst = self.parent.instructions.get(view)
 
-        if inst:
+
 
             instructions_frame = tk.Frame(self)
             self.instructions_lbl = tk.Label(instructions_frame,
