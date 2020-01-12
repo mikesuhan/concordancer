@@ -24,6 +24,10 @@ from objects.instructions import Instructions
 from objects.instructionswindow import InstructionsWindow
 from objects.ngramsoptionswindow import NgramsOptionsWindow
 
+from ircprocessing.chat import IRC
+from ircprocessing.chatmessage import ChatMessage
+from ircprocessing.chatlog import ChatLog
+
 from message import Message
 
 
@@ -43,17 +47,19 @@ class GUI:
     def __init__(self):
         self.queue = Queue()
         self.root = tk.Tk()
-        self.root.minsize(300, 200)
-        self.root.geometry('1100x600')
         self.corpus = Corpus(self.queue)
         self.instructions = Instructions()
 
-        top_frame = tk.Frame(self.root)
+        self.chat_settings = {
+            'server': 'chat.freenode.net',
+            'channel': "#mikecool",
+            'port': 6667,
+        }
 
-        status_frame = tk.Frame(top_frame)
-        self.status_text = FancyText(status_frame, wrap=tk.WORD, background=fm.white, font=fm.instructions_font)
-        self.status_text.tag_config('red', foreground='red')
-        self.status_text.insert(1.0, self.instructions.get('Main Window'))
+        self.chat = None
+        self.chat_log = None
+
+
         # Menu bar
         menu_bar = tk.Menu(self.root)
 
@@ -78,7 +84,10 @@ class GUI:
         tools_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
         menu_bar.add_cascade(label='Tools', menu=tools_menu)
 
-        self.root.config(menu=menu_bar, background=fm.dark_bg)
+        self.root.config(menu=menu_bar)
+
+
+        top_frame = tk.Frame(self.root)
 
 
         # File list
@@ -89,7 +98,7 @@ class GUI:
         lb_frame = tk.Frame(file_list_frame)
 
         self.file_list = FancyListbox(lb_frame,
-                                      width=40,
+                                      width=35,
                                       selectmode=tk.EXTENDED,
                                       remove=self.remove,
                                       open_text=self.open_text)
@@ -111,8 +120,12 @@ class GUI:
 
         file_list_frame.pack(side=tk.LEFT, expand=tk.NO, fill=tk.Y)
 
+
+        middle_frame = tk.Frame(top_frame)
+
+
         # search bar
-        search_frame = tk.Frame(top_frame)
+        search_frame = tk.Frame(middle_frame)
 
         self.conc_left_entry = FancyEntry(search_frame, width=2, justify=tk.CENTER)
         self.conc_left_entry.insert(0, self.default_conc_length)
@@ -124,32 +137,121 @@ class GUI:
         self.search_var = tk.StringVar()
         self.search_entry = FancyEntry(search_frame, textvariable=self.search_var)
         self.search_entry.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
+        self.search_entry.bind('<Return>', self.search_kp)
 
         search_button = FancyButton(search_frame, text='Search', padx=15, command=self.search)
         search_button.pack(side=tk.RIGHT, fill=tk.Y)
         search_button.pack()
 
-        self.root.bind('<Return>', self.search_kp)
-
         search_frame.pack(expand=tk.NO, side=tk.TOP, fill=tk.X)
 
-        # status area
-        self.status_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.BOTH)
-        status_frame.pack(expand=tk.YES, side=tk.TOP, fill=tk.BOTH)
+        # Big text box in the middle
+        status_frame = tk.Frame(middle_frame)
+
+        self.status_text = FancyText(status_frame,
+                                     width=55,
+                                     wrap=tk.WORD,
+                                     background=fm.white,
+                                     font=fm.instructions_font)
+        self.status_text.insert(1.0, self.instructions.get('Main Window'))
+        self.status_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.Y)
+        status_frame.pack(expand=tk.YES, fill=tk.Y)
 
         # vertical scroll bar
         vsb = tk.Scrollbar(status_frame)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        vsb.pack(side=tk.LEFT, fill=tk.Y)
         vsb.config(command=self.status_text.yview)
         self.status_text.config(yscrollcommand=vsb.set)
 
-        top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
+        middle_frame.pack(side=tk.LEFT, fill=tk.Y)
+
+        right_frame = tk.Frame(top_frame)
+
+        chat_box_frame = tk.Frame(right_frame)
+
+        self.names_text = FancyText(chat_box_frame,
+                                    width=30,
+                                    height=3,
+                                    wrap=tk.WORD,
+                                    background='SystemButtonFace',
+                                    font=fm.chat_font)
+        self.names_text.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
+        self.names_text.tag_config('other', font=fm.chat_user_font, foreground=fm.chat_other_fg)
+
+        self.chat_text = FancyText(chat_box_frame,
+                                   width=30,
+                                   wrap=tk.WORD,
+                                   background=fm.white,
+                                   font=fm.chat_font)
+        self.chat_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.BOTH)
+
+
+        chat_vsb = tk.Scrollbar(chat_box_frame)
+        chat_vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        chat_vsb.config(command=self.chat_text.yview)
+        self.chat_text.config(yscrollcommand=chat_vsb.set)
+
+        self.chat_text.tag_config('user', font=fm.chat_user_font, foreground=fm.chat_me_fg)
+        self.chat_text.tag_config('other', font=fm.chat_user_font, foreground=fm.chat_other_fg)
+
+        chat_box_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
+
+        self.chat_input = FancyText(right_frame,
+                                   width=30,
+                                   height=3,
+                                   wrap=tk.WORD,
+                                   background=fm.white,
+                                   font=fm.chat_font)
+        self.chat_input.pack(expand=tk.YES, fill=tk.BOTH, side=tk.LEFT)
+        self.chat_input.bind('<KeyRelease-Return>', self.chat_send_kp)
+
+        right_frame.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.BOTH)
+
+        top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.Y)
 
         self.status_entry = FancyEntry(self.root, background='SystemButtonFace', font=fm.status_font)
         self.status_entry.pack(side=tk.TOP, expand=tk.NO, fill=tk.X)
 
 
         tk.mainloop()
+
+    def chat_send_kp(self, event):
+        self.chat_send()
+        self.chat_input.delete(1.0, tk.END)
+        self.chat_input.mark_set(tk.SEL, 1.0)
+
+    def chat_send(self):
+        if self.chat is None:
+            self.chat_text.insert(tk.END, 'Connecting...\n')
+            nickname = self.chat_input.get(1.0, tk.END).strip().replace(' ', '')
+            if nickname:
+                self.chat = IRC(queue=self.queue,
+                                server=self.chat_settings['server'],
+                                port=self.chat_settings['port'],
+                                channel=self.chat_settings['channel'],
+                                nickname=nickname)
+
+                if self.chat.error:
+                    self.chat_text.insert(tk.END, 'Failed to connect. Trying again.\n')
+                    self.chat = None
+                    self.root.after(2000, self.chat_send)
+                else:
+                    self.chat_log = ChatLog()
+                    chat_process = Process(target=self.chat.start)
+                    chat_process.start()
+                    self.root.after(100, self.process_queue)
+
+
+        else:
+            print(247, self.chat.nickname, self.chat_log.prev_user())
+            if self.chat_log.prev_user() != self.chat.nickname:
+                self.chat_text.insert(tk.END, '\n' + self.chat.nickname + '\n', 'user')
+
+            msg = self.chat_input.get(1.0, tk.END).strip()
+            self.chat.sendmsg(self.chat_settings['channel'], msg)
+            self.chat_text.insert(tk.END, msg + '\n')
+            chat_msg = ChatMessage(user=self.chat.nickname, body=msg)
+            self.chat_log.add(chat_msg)
 
     def open_manually_enter_window(self):
         ManuallyEnterWindow(self)
@@ -217,7 +319,6 @@ class GUI:
         elif len(sel) == 0:
             self.msg('No texts selected.')
         else:
-            print(sel, len(self.corpus.texts))
             tw = TextWindow(self, title=self.corpus.texts[sel[0]].title)
             tw.text.insert(1.0, self.corpus.texts[sel[0]])
 
@@ -323,6 +424,9 @@ class GUI:
             if p.is_alive():
                 self.root.after(100, self.process_queue)
                 break
+        else:
+            if self.chat is not None:
+                self.root.after(100, self.process_queue)
 
         if self.save_process and self.save_process.is_alive():
             self.root.after(100, self.process_queue)
@@ -364,6 +468,22 @@ class GUI:
             elif type(q_item) is Message:
                 self.msg(q_item)
 
+            elif type(q_item) is ChatMessage:
+                if q_item.names_list:
+                    self.names_text.delete(1.0, tk.END)
+                    for nm in q_item.names_list:
+                        self.names_text.insert(tk.END, nm, 'other')
+                        self.names_text.insert(tk.END, ' ')
+                elif q_item.connected_as:
+                    self.chat_text.insert(tk.END, 'Connected as ' + q_item.connected_as + '\n')
+                    self.chat.nickname = q_item.connected_as
+                else:
+                    print(480, self.chat.nickname, self.chat_log.prev_user())
+                    if not self.chat_log or q_item.user != self.chat_log.prev_user():
+                        self.chat_text.insert(tk.END, '\n' + q_item.user + '\n', 'other')
+                    self.chat_text.insert(tk.END, q_item.body + '\n')
+                    self.chat_log.add(q_item)
+
 
             elif type(q_item) is list and type(q_item[0]) is Result:
                 if q_item[0].r_id not in self.freq_list_windows.keys():
@@ -390,7 +510,7 @@ class GUI:
             self.root.after(100, self.process_queue)
 
         except queue.Empty:
-            pass
+                pass
 
     def clear_queue(self):
         try:
