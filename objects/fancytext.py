@@ -3,12 +3,13 @@ import formatting as fm
 
 class FancyText(tk.Text):
 
-    def __init__(self, parent, background=fm.text_bg, font=fm.text_font, foreground=fm.text_fg, *args, **kwargs):
+    def __init__(self, parent, width=90, background=fm.text_bg, font=fm.text_font, foreground=fm.text_fg, *args, **kwargs):
         tk.Text.__init__(self, parent, *args, **kwargs,
                          background=background,
                          font=font,
                          foreground=foreground,
-                         insertbackground=fm.text_fg)
+                         insertbackground=fm.text_fg,
+                         width=width)
         self.parent = parent
         self.popup_menu = tk.Menu(self, tearoff=0)
         self.popup_menu.add_command(label="Copy", command=self.copy_selected)
