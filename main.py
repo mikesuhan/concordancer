@@ -95,6 +95,14 @@ class GUI:
         file_list_frame = tk.Frame(top_frame)
         tk.Label(file_list_frame, text='File Manager').pack(side=tk.TOP, pady=4)
 
+
+        fl_btn_frame = tk.Frame(file_list_frame)
+        remove_text_btn = FancyButton(fl_btn_frame, text='Remove', command=self.remove)
+        remove_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
+        load_text_btn = FancyButton(fl_btn_frame, text='Load')
+        load_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
+        fl_btn_frame.pack(expand=tk.NO, fill=tk.X)
+
         lb_frame = tk.Frame(file_list_frame)
 
         self.file_list = FancyListbox(lb_frame,
@@ -103,20 +111,20 @@ class GUI:
                                       remove=self.remove,
                                       open_text=self.open_text)
         self.file_list.pack(expand=tk.YES, fill=tk.Y, side=tk.LEFT)
+
         fl_vsb = tk.Scrollbar(lb_frame, orient=tk.VERTICAL)
         fl_vsb.config(command=self.file_list.yview)
         fl_vsb.pack(side=tk.RIGHT, fill=tk.Y)
-
         self.file_list.config(yscrollcommand=fl_vsb.set)
+
+
 
         lb_frame.pack(expand=tk.YES, fill=tk.Y)
 
-        fl_btn_frame = tk.Frame(file_list_frame)
-        remove_text_btn = FancyButton(fl_btn_frame, text='Remove', command=self.remove)
-        remove_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
-        load_text_btn = FancyButton(fl_btn_frame, text='Load')
-        load_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
-        fl_btn_frame.pack(expand=tk.NO, fill=tk.X)
+        fl_hsb = tk.Scrollbar(file_list_frame, orient=tk.HORIZONTAL)
+        fl_hsb.config(command=self.file_list.xview)
+        fl_hsb.pack(side=tk.TOP, fill=tk.X, expand=tk.NO)
+        self.file_list.config(xscrollcommand=fl_hsb.set)
 
         file_list_frame.pack(side=tk.LEFT, expand=tk.NO, fill=tk.Y)
 
