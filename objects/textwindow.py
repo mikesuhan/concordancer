@@ -6,7 +6,7 @@ from textprocessing.result import Result
 
 class TextWindow(tk.Toplevel):
 
-    def __init__(self, parent, view=None, title='', wrap=tk.WORD, *args, **kwargs):
+    def __init__(self, parent, view=None, font=fm.text_font, title='', wrap=tk.WORD, *args, **kwargs):
         tk.Toplevel.__init__(self, parent.root, *args, **kwargs)
         self.parent = parent
         self.title(title)
@@ -33,12 +33,12 @@ class TextWindow(tk.Toplevel):
 
         top_frame = tk.Frame(self)
 
-        self.text = FancyText(top_frame, wrap=wrap, padx=10, pady=5)
+        self.text = FancyText(top_frame, wrap=wrap, padx=10, pady=5, font=font)
         self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
 
         self.text.tag_config('text_bg', background=fm.text_bg)
         self.text.tag_config('white', background=fm.white)
-        self.text.tag_config('heading', font=fm.bold_text_font)
+        self.text.tag_config('heading', font=fm.bold_ms_font)
         # give priority to formatting of selected text over that of tags
         self.text.tag_raise('sel')
 
