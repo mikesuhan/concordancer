@@ -3,6 +3,9 @@ from tkinter import filedialog
 from multiprocessing import Queue, Process
 import queue
 from time import gmtime, strftime
+from math import ceil
+from random import choice
+import string
 
 import formatting as fm
 
@@ -12,6 +15,7 @@ from textprocessing.result import Result
 from textprocessing.msword import write_docx
 from textprocessing.html import write_html
 
+from objects.chatsettingswindow import ChatSettingsWindow
 from objects.fancytext import FancyText
 from objects.fancybutton import FancyButton
 from objects.fancyentry import FancyEntry
@@ -52,10 +56,11 @@ class GUI:
 
         self.chat_settings = {
             'server': 'chat.freenode.net',
-            'channel': "#mikecool",
+            'channel': '#' + ''.join(
+                choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16)),
             'port': 6667,
         }
-
+        self.chat_scroll_lock = True
         self.chat = None
         self.chat_log = None
 
@@ -65,9 +70,13 @@ class GUI:
 
         # File menu on menu bar
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Load Files", command=self.load_files)
-        file_menu.add_command(label="Manually Enter Text", command=self.open_manually_enter_window)
-        file_menu.add_command(label="Remove Files") #todo add this
+        file_menu.add_command(label="Save package")
+        file_menu.add_command(label="Load package")
+
+        file_menu.add_separator()
+
+        file_menu.add_command(label="Load text file(s)", command=self.load_files)
+        file_menu.add_command(label="Manually enter text", command=self.open_manually_enter_window)
 
         file_menu.add_separator()
 
@@ -81,8 +90,12 @@ class GUI:
         # Tools menu
         tools_menu = tk.Menu(menu_bar, tearoff=0)
         tools_menu.add_command(label='List', command=self.word_list_options)
-        tools_menu.add_command(label='Edit Instructions', command=self.open_instructios_window)
         menu_bar.add_cascade(label='Tools', menu=tools_menu)
+
+        options_menu = tk.Menu(menu_bar, tearoff=0)
+        options_menu.add_command(label='Add/Edit Instructions', command=self.open_instructions_window)
+        options_menu.add_command(label='Chat Settings', command=self.open_chat_settings)
+        menu_bar.add_cascade(label='Options', menu=options_menu)
 
         self.root.config(menu=menu_bar)
 
@@ -99,7 +112,7 @@ class GUI:
         fl_btn_frame = tk.Frame(file_list_frame)
         remove_text_btn = FancyButton(fl_btn_frame, text='Remove', command=self.remove)
         remove_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
-        load_text_btn = FancyButton(fl_btn_frame, text='Load')
+        load_text_btn = FancyButton(fl_btn_frame, text='Load', command=self.load_files)
         load_text_btn.pack(expand=tk.YES, side=tk.LEFT, fill=tk.X)
         fl_btn_frame.pack(expand=tk.NO, fill=tk.X)
 
@@ -194,10 +207,10 @@ class GUI:
         self.chat_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.BOTH)
 
 
-        chat_vsb = tk.Scrollbar(chat_box_frame)
-        chat_vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        chat_vsb.config(command=self.chat_text.yview)
-        self.chat_text.config(yscrollcommand=chat_vsb.set)
+        self.chat_vsb = tk.Scrollbar(chat_box_frame)
+        self.chat_vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self.chat_vsb.config(command=self.chat_scroll)
+        self.chat_text.config(yscrollcommand=self.chat_vsb.set)
 
         self.chat_text.tag_config('user', font=fm.chat_user_font, foreground=fm.chat_me_fg)
         self.chat_text.tag_config('other', font=fm.chat_user_font, foreground=fm.chat_other_fg)
@@ -209,7 +222,8 @@ class GUI:
                                    height=3,
                                    wrap=tk.WORD,
                                    background=fm.white,
-                                   font=fm.chat_font)
+                                   font=fm.chat_font,
+                                    placeholder='Enter a name and press enter to start the chat.')
         self.chat_input.pack(expand=tk.YES, fill=tk.BOTH, side=tk.LEFT)
         self.chat_input.bind('<KeyRelease-Return>', self.chat_send_kp)
 
@@ -223,10 +237,26 @@ class GUI:
 
         tk.mainloop()
 
+    def open_chat_settings(self):
+        ChatSettingsWindow(self.root, self.chat_settings)
+
     def chat_send_kp(self, event):
         self.chat_send()
         self.chat_input.delete(1.0, tk.END)
         self.chat_input.mark_set(tk.SEL, 1.0)
+        if self.chat_scroll_lock:
+            self.chat_text.see(tk.END)
+
+    def chat_scroll(self, *args):
+        self.chat_text.yview(*args)
+        sb_y_pos = args[1]
+        sb_top, sb_bottom = self.chat_text.yview()
+        sb_height = sb_bottom - sb_top
+        sb_end_pos = 1.0 - sb_height
+        sb_end_pos = ceil(sb_end_pos * 10000) / 10000
+        self.chat_scroll_lock = str(sb_y_pos) == str(sb_end_pos)
+        print(str(sb_end_pos), str(sb_y_pos), self.chat_scroll_lock)
+
 
     def chat_send(self):
         if self.chat is None:
@@ -395,8 +425,8 @@ class GUI:
         self.corpus = None
         self.file_list.delete(0, tk.END)
 
-    def open_instructios_window(self):
-        InstructionsWindow(self.root, self.instructions)
+    def open_instructions_window(self):
+        InstructionsWindow(self, self.instructions)
 
 
     def load_from_url(self):
@@ -486,11 +516,12 @@ class GUI:
                     self.chat_text.insert(tk.END, 'Connected as ' + q_item.connected_as + '\n')
                     self.chat.nickname = q_item.connected_as
                 else:
-                    print(480, self.chat.nickname, self.chat_log.prev_user())
                     if not self.chat_log or q_item.user != self.chat_log.prev_user():
                         self.chat_text.insert(tk.END, '\n' + q_item.user + '\n', 'other')
                     self.chat_text.insert(tk.END, q_item.body + '\n')
                     self.chat_log.add(q_item)
+                    if self.chat_scroll_lock:
+                        self.chat_text.see(tk.END)
 
 
             elif type(q_item) is list and type(q_item[0]) is Result:
@@ -502,7 +533,7 @@ class GUI:
                     else:
                         view = ''
 
-                    self.freq_list_windows[q_item[0].r_id] = TextWindow(self, view=view, wrap='none')
+                    self.freq_list_windows[q_item[0].r_id] = TextWindow(self, view=view, wrap='none', font=fm.ms_font)
 
                     for i, heading in enumerate(q_item[0].heading()):
                         self.freq_list_windows[q_item[0].r_id].text.insert(tk.END, heading, 'heading')
