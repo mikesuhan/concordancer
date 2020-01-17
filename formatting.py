@@ -13,12 +13,17 @@ gray_bg = '#40E0D0'
 
 list_bgs = ['white', 'text_bg']
 
-entry_font = ('Courier', 15)
-text_font = ('Courier', 11)
+entry_font = ('Verdana', 13)
+text_font = ('Verdana', 11)
+conc_font = ('Courier', 11)
+
+
 status_font = ('Verdana', 10)
 settings_font = ('Verdana', 10)
 instructions_font = ('Verdana', 12)
-bold_text_font = ('Courier', 11, 'bold')
+bold_ms_font = ('Courier', 11, 'bold')
+ms_font = ('Courier', 11,)
+
 button_font = ('Verdana', 10)
 
 chat_font = ('Verdana', 10)
