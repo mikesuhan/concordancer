@@ -9,7 +9,6 @@ class Concordance:
             lines_s: starting line of these lines among all lines
         """
         self.query = query
-        print('concordance', id)
         self.id = id
         self.text_i = text_i
         self.pad_left = pad_left
