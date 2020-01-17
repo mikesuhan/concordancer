@@ -1,6 +1,7 @@
 import tkinter as tk
 from objects.fancytext import FancyText
 from objects.textwindow import TextWindow
+import formatting as fm
 
 class ConcWindow(tk.Toplevel):
 
@@ -36,7 +37,7 @@ class ConcWindow(tk.Toplevel):
 
         conc_frame = tk.Frame(self)
 
-        self.text = FancyText(conc_frame, wrap='none')
+        self.text = FancyText(conc_frame, wrap='none', font=fm.ms_font)
         self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
 
         vsb = tk.Scrollbar(conc_frame)
