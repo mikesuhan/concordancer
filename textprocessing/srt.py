@@ -1,2 +1,9 @@
 def parse_srt(text):
-    return '\n'.join(' '.join(segment.split('\n')[2:]) for segment in text.split('\n\n'))
+    new_text = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.isdigit() or '-->' in line:
+            continue
+        else:
+            new_text.append(line)
+    return '\n'.join(new_text)
