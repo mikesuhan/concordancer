@@ -33,7 +33,7 @@ class TextWindow(tk.Toplevel):
 
         top_frame = tk.Frame(self)
 
-        self.text = FancyText(top_frame, wrap=wrap, padx=10, pady=5, font=font)
+        self.text = FancyText(top_frame, gui_obj=self.parent, wrap=wrap, padx=10, pady=5, font=font)
         self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
 
         self.text.tag_config('text_bg', background=fm.text_bg)

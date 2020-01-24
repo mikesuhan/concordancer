@@ -37,7 +37,7 @@ class ConcWindow(tk.Toplevel):
 
         conc_frame = tk.Frame(self)
 
-        self.text = FancyText(conc_frame, wrap='none', font=fm.ms_font)
+        self.text = FancyText(conc_frame, gui_obj=self.parent, wrap='none', font=fm.ms_font)
         self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
 
         vsb = tk.Scrollbar(conc_frame)
