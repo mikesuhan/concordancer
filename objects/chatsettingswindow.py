@@ -1,6 +1,4 @@
 import tkinter as tk
-from random import choice
-import string
 
 from objects.fancyentry import FancyEntry
 from objects.fancybutton import FancyButton
@@ -10,7 +8,7 @@ import formatting as fm
 class ChatSettingsWindow(tk.Toplevel):
     def __init__(self, parent, settings, *args, **kwargs):
         tk.Toplevel.__init__(self, parent, *args, **kwargs)
-        self.geometry('340x110')
+        self.geometry('340x150')
         self.title('Chat Settings')
         self.settings = settings
 
