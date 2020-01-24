@@ -51,7 +51,7 @@ class GUI:
     def __init__(self):
         self.queue = Queue()
         self.root = tk.Tk()
-        self.corpus = Corpus(self.queue)
+        self.corpus = Corpus(self)
         self.instructions = Instructions()
 
         self.chat_settings = {
@@ -70,8 +70,8 @@ class GUI:
 
         # File menu on menu bar
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Save package")
-        file_menu.add_command(label="Load package")
+        file_menu.add_command(label='Save Package', command=self.save_package)
+        file_menu.add_command(label='Load package')
 
         file_menu.add_separator()
 
@@ -170,6 +170,7 @@ class GUI:
         status_frame = tk.Frame(middle_frame)
 
         self.status_text = FancyText(status_frame,
+                                     gui_obj=self,
                                      width=55,
                                      wrap=tk.WORD,
                                      background=fm.white,
@@ -200,6 +201,7 @@ class GUI:
         self.names_text.tag_config('other', font=fm.chat_user_font, foreground=fm.chat_other_fg)
 
         self.chat_text = FancyText(chat_box_frame,
+                                   gui_obj=self,
                                    width=30,
                                    wrap=tk.WORD,
                                    background=fm.white,
@@ -218,12 +220,13 @@ class GUI:
         chat_box_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
 
         self.chat_input = FancyText(right_frame,
+                                    gui_obj=self,
                                    width=30,
                                    height=3,
                                    wrap=tk.WORD,
                                    background=fm.white,
                                    font=fm.chat_font,
-                                    placeholder='Enter a name and press enter to start the chat.')
+                                    placeholder='Write your name and press enter to start the chat.')
         self.chat_input.pack(expand=tk.YES, fill=tk.BOTH, side=tk.LEFT)
         self.chat_input.bind('<KeyRelease-Return>', self.chat_send_kp)
 
@@ -236,6 +239,11 @@ class GUI:
 
 
         tk.mainloop()
+
+    def save_package(self):
+        fp = filedialog.asksaveasfilename(filetypes=(('Corpus', '.crps'),), defaultextension='.crps')
+        if fp:
+            self.corpus.save(fp)
 
     def open_chat_settings(self):
         ChatSettingsWindow(self.root, self.chat_settings)
@@ -394,7 +402,7 @@ class GUI:
     def search_kp(self, event):
         self.search()
 
-    def search(self):
+    def search(self, search_str=None):
         # determines concordance settings
         conc_left, conc_right = self.conc_left_entry.get(), self.conc_right_entry.get()
 
@@ -411,7 +419,10 @@ class GUI:
             self.conc_right_entry.delete(0, tk.END)
             self.conc_right_entry.insert(0, self.default_conc_length)
 
-        p = Process(target=self.corpus.concordance, args=(self.search_var.get(), conc_left, conc_right, self.conc_id))
+        if search_str is None:
+            search_str = self.search_var.get()
+
+        p = Process(target=self.corpus.concordance, args=(search_str, conc_left, conc_right, self.conc_id))
         self.conc_processes.append(p)
         self.conc_id += 1
         p.start()
@@ -516,7 +527,7 @@ class GUI:
                     self.chat_text.insert(tk.END, 'Connected as ' + q_item.connected_as + '\n')
                     self.chat.nickname = q_item.connected_as
                 else:
-                    if not self.chat_log or q_item.user != self.chat_log.prev_user():
+                    if not self.chat_log or q_item.user and q_item.user != self.chat_log.prev_user():
                         self.chat_text.insert(tk.END, '\n' + q_item.user + '\n', 'other')
                     self.chat_text.insert(tk.END, q_item.body + '\n')
                     self.chat_log.add(q_item)
