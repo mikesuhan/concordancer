@@ -1,3 +1,5 @@
+import os
+from json import dumps
 from zipfile import ZipFile
 from io import BytesIO
 from operator import itemgetter
@@ -6,7 +8,7 @@ from textprocessing.text import Text
 from textprocessing.substring import Substring
 from textprocessing.result import Result
 from string import punctuation
-from re import findall
+from re import findall, sub
 from message import Message
 
 punctuation += '”“’‘—'
@@ -14,9 +16,11 @@ punctuation += '”“’‘—'
 class Corpus:
 
     text_proc_msg = 'Processing text {:,} of {:,}.'
+    ignore_exts = '.nfo',
 
-    def __init__(self, queue):
-        self.queue = queue
+    def __init__(self, gui_obj):
+        self.gui_obj = gui_obj
+        self.queue = gui_obj.queue
         self.text_paths = []
         self.texts = []
         self.i = 0
@@ -47,7 +51,7 @@ class Corpus:
             if tp not in self.text_paths:
                 if tp.endswith('.zip'):
                     with ZipFile(tp) as zip:
-                        for fn in zip.namelist():
+                        for fn in [f for f in zip.namelist() if not f.endswith(self.ignore_exts)]:
                             with zip.open(fn) as f:
                                 self.text_paths.append(fn)
                                 self.texts.append(Text(filepath=fn, io=BytesIO(f.read()), id=text_count))
@@ -266,6 +270,32 @@ class Corpus:
                 results = []
         if results:
             self.queue.put(results)
+
+    def save(self, zip_fp):
+        with ZipFile(zip_fp, 'w') as zip:
+            text_data = {}
+            for i, text in enumerate(self.texts):
+                if text.filepath:
+                    fn = os.path.split(text.filepath)[-1]
+                elif text.title:
+                    fn = sub('[^a-zA-Z0-1 \-_()]', '', text.title)
+                    fn += '.txt'
+                else:
+                    fn = 'text ' + str(i) + '.txt'
+
+                zip.writestr(fn, text.text)
+                print(fn, text.text[:50])
+
+                text_data[fn] = {
+                    'filename': fn,
+                    'title': text.title,
+                }
+
+            zip.writestr('text_data.json', dumps(text_data))
+            zip.writestr('chat_settings.json', dumps(self.gui_obj.chat_settings))
+            zip.writestr('instructions.json', dumps(self.gui_obj.instructions.instructions))
+
+
 
 
     @staticmethod

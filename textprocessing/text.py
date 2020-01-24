@@ -33,16 +33,19 @@ class Text:
             self.title = title
         elif filepath:
             self.title = filepath
-        else:
+        elif id is not None:
             self.title = 'Text ' + id
+        else:
+            self.title = 'Text'
 
         if io:
             if filepath.endswith('.docx'):
                 self.text = read_docx(io)
             elif filepath.endswith('.txt'):
-                self.text = io.read().strip()
+                self.text = io.read().decode('utf-8').strip()
             elif filepath.endswith('.srt'):
-                self.text = parse_srt(io.read())
+                self.text = io.read().decode('utf-8')
+                self.text = parse_srt(self.text)
 
         elif filepath:
             try:
@@ -52,7 +55,7 @@ class Text:
                     self.text = read_docx(filepath)
 
                 elif filepath.endswith('.srt'):
-                    with open(filepath, 'r') as f:
+                    with open(filepath, encoding='utf-8') as f:
                         self.text = parse_srt(f.read())
                 else:
                     with open(filepath, errors='ignore', encoding='utf-8') as f:
