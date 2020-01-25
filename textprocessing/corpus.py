@@ -18,9 +18,8 @@ class Corpus:
     text_proc_msg = 'Processing text {:,} of {:,}.'
     ignore_exts = '.nfo',
 
-    def __init__(self, gui_obj):
-        self.gui_obj = gui_obj
-        self.queue = gui_obj.queue
+    def __init__(self, queue):
+        self.queue = queue
         self.text_paths = []
         self.texts = []
         self.i = 0
@@ -270,30 +269,6 @@ class Corpus:
                 results = []
         if results:
             self.queue.put(results)
-
-    def save(self, zip_fp):
-        with ZipFile(zip_fp, 'w') as zip:
-            text_data = {}
-            for i, text in enumerate(self.texts):
-                if text.filepath:
-                    fn = os.path.split(text.filepath)[-1]
-                elif text.title:
-                    fn = sub('[^a-zA-Z0-1 \-_()]', '', text.title)
-                    fn += '.txt'
-                else:
-                    fn = 'text ' + str(i) + '.txt'
-
-                zip.writestr(fn, text.text)
-                print(fn, text.text[:50])
-
-                text_data[fn] = {
-                    'filename': fn,
-                    'title': text.title,
-                }
-
-            zip.writestr('text_data.json', dumps(text_data))
-            zip.writestr('chat_settings.json', dumps(self.gui_obj.chat_settings))
-            zip.writestr('instructions.json', dumps(self.gui_obj.instructions.instructions))
 
 
 
