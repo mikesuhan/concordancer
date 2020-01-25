@@ -13,7 +13,13 @@ class ManuallyEnterWindow(tk.Toplevel):
 
         top_frame = tk.Frame(self)
 
-        self.text = FancyText(top_frame, wrap=wrap, padx=10, pady=5, background=fm.white, font=fm.status_font)
+        self.text = FancyText(top_frame,
+                              wrap=wrap,
+                              padx=10,
+                              pady=5,
+                              background=fm.white,
+                              font=fm.status_font,
+                              edit=True)
         self.text.pack(side=tk.LEFT, expand=tk.YES, fill=tk.BOTH)
 
 

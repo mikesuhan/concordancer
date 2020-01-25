@@ -3,7 +3,8 @@ import formatting as fm
 
 class FancyText(tk.Text):
 
-    def __init__(self, parent, gui_obj=None, placeholder=None, width=90, background=fm.text_bg, font=fm.text_font, foreground=fm.text_fg, *args, **kwargs):
+    def __init__(self, parent, gui_obj=None, placeholder=None, width=90, background=fm.text_bg, font=fm.text_font,
+                 foreground=fm.text_fg, edit=False, *args, **kwargs):
         """
         parent: parent object
         gui_obj: GUI from main.py -- enables searching using the mouse click context menu if this is not None
@@ -19,8 +20,16 @@ class FancyText(tk.Text):
         self.popup_menu = tk.Menu(self, tearoff=0)
         self.popup_menu_search = tk.Menu(self, tearoff=0)
 
+        if edit:
+            self.popup_menu.add_command(label="Cut", command=self.cut_selected)
+            self.popup_menu_search.add_command(label="Cut", command=self.cut_selected)
+
         self.popup_menu.add_command(label="Copy", command=self.copy_selected)
         self.popup_menu_search.add_command(label="Copy", command=self.copy_selected)
+
+        if edit:
+            self.popup_menu.add_command(label="Paste", command=self.paste)
+            self.popup_menu_search.add_command(label="Paste", command=self.paste)
 
         self.popup_menu.add_command(label="Select All", command=self.select_all)
         self.popup_menu_search.add_command(label="Select All", command=self.select_all)

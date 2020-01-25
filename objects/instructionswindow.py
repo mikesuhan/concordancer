@@ -23,7 +23,7 @@ class InstructionsWindow(tk.Toplevel):
         self.listbox.selection_set(0, 0)
 
 
-        self.text = FancyText(text_frame, height=150, wrap=tk.WORD)
+        self.text = FancyText(text_frame, height=150, wrap=tk.WORD, edit=True)
         self.text.bind('<KeyRelease>', self.on_text_modify)
 
         vsb = tk.Scrollbar(self)
