@@ -38,8 +38,8 @@ class InstructionsWindow(tk.Toplevel):
     def on_text_modify(self, event):
         self.instructions.set(self.current_sel, event.widget.get(1.0, tk.END))
         if self.current_sel == 0:
-            self.parent.status_text.delete(1.0, tk.END)
-            self.parent.status_text.insert(1.0, event.widget.get(1.0, tk.END))
+            self.parent.status_text.d_delete(1.0, tk.END)
+            self.parent.status_text.d_insert(1.0, event.widget.get(1.0, tk.END))
 
 
     def on_lb_select(self, event):
