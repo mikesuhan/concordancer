@@ -42,6 +42,16 @@ class FancyText(tk.Text):
             self.insert(tk.END, placeholder)
             self.bind('<Button-1>', self.clear_placeholder)
 
+    def d_insert(self, *args):
+        self.configure(state=tk.NORMAL)
+        self.insert(*args)
+        self.configure(state=tk.DISABLED)
+
+    def d_delete(self, *args):
+        self.configure(state=tk.NORMAL)
+        self.delete(*args)
+        self.configure(state=tk.DISABLED)
+
     def clear_placeholder(self, event):
         self.delete(1.0, tk.END)
         self.unbind('<Button-1>')
