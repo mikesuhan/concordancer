@@ -27,7 +27,6 @@ class FancyEntry(tk.Entry):
         self.popup_menu.add_command(label="Copy", command=self.copy_selected)
         self.popup_menu.add_command(label="Paste", command=self.paste)
 
-
         self.bind("<Button-3>", self.popup) # Button-2 on Aqua
 
         if placeholder:
@@ -45,8 +44,11 @@ class FancyEntry(tk.Entry):
             self.popup_menu.grab_release()
 
     def cut_selected(self):
-        self.copy_selected()
-        self.delete(0, tk.END)
+        try:
+            self.copy_selected()
+            self.delete(self.index('sel.first'), self.index('sel.last'))
+        except tk.TclError:
+            pass
 
     def copy_selected(self):
         self.parent.clipboard_clear()
@@ -54,4 +56,10 @@ class FancyEntry(tk.Entry):
 
 
     def paste(self):
-        self.insert(self.index(tk.INSERT), self.parent.clipboard_get())
+        try:
+            sf, sl = self.index('sel.first'), self.index('sel.last')
+            self.delete(sf, sl)
+            self.insert(sf, self.parent.clipboard_get())
+
+        except tk.TclError:
+            self.insert(self.index(tk.INSERT), self.parent.clipboard_get())

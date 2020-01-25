@@ -57,11 +57,19 @@ class FancyText(tk.Text):
             menu.grab_release()
 
     def cut_selected(self):
-        self.copy_selected()
-        self.delete(0, tk.END) #todo make this not delete everything
+        try:
+            self.copy_selected()
+            self.delete(self.index('sel.first'), self.index('sel.last'))
+        except tk.TclError:
+            pass
 
     def paste(self):
-        self.insert(self.index(tk.INSERT), self.parent.clipboard_get())
+        try:
+            sf, sl = self.index('sel.first'), self.index('sel.last')
+            self.delete(sf, sl)
+            self.insert(sf, self.parent.clipboard_get())
+        except tk.TclError:
+            self.insert(self.index(tk.INSERT), self.parent.clipboard_get())
 
     def copy_selected(self):
         self.parent.clipboard_clear()
