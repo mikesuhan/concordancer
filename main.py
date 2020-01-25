@@ -2,10 +2,14 @@ import tkinter as tk
 from tkinter import filedialog
 from multiprocessing import Queue, Process
 import queue
+import os
 from time import gmtime, strftime
 from math import ceil
 from random import choice
 import string
+from json import dumps
+from zipfile import ZipFile
+from re import sub
 
 import formatting as fm
 
@@ -51,7 +55,7 @@ class GUI:
     def __init__(self):
         self.queue = Queue()
         self.root = tk.Tk()
-        self.corpus = Corpus(self)
+        self.corpus = Corpus(self.queue)
         self.instructions = Instructions()
 
         self.chat_settings = {
@@ -99,9 +103,7 @@ class GUI:
 
         self.root.config(menu=menu_bar)
 
-
         top_frame = tk.Frame(self.root)
-
 
         # File list
 
@@ -130,8 +132,6 @@ class GUI:
         fl_vsb.pack(side=tk.RIGHT, fill=tk.Y)
         self.file_list.config(yscrollcommand=fl_vsb.set)
 
-
-
         lb_frame.pack(expand=tk.YES, fill=tk.Y)
 
         fl_hsb = tk.Scrollbar(file_list_frame, orient=tk.HORIZONTAL)
@@ -141,9 +141,7 @@ class GUI:
 
         file_list_frame.pack(side=tk.LEFT, expand=tk.NO, fill=tk.Y)
 
-
         middle_frame = tk.Frame(top_frame)
-
 
         # search bar
         search_frame = tk.Frame(middle_frame)
@@ -174,8 +172,9 @@ class GUI:
                                      width=55,
                                      wrap=tk.WORD,
                                      background=fm.white,
-                                     font=fm.instructions_font)
-        self.status_text.insert(1.0, self.instructions.get('Main Window'))
+                                     font=fm.instructions_font,
+                                     state=tk.DISABLED)
+        self.status_text.d_insert(1.0, self.instructions.get('Main Window'))
         self.status_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.Y)
         status_frame.pack(expand=tk.YES, fill=tk.Y)
 
@@ -196,7 +195,8 @@ class GUI:
                                     height=3,
                                     wrap=tk.WORD,
                                     background='SystemButtonFace',
-                                    font=fm.chat_font)
+                                    font=fm.chat_font,
+                                    state=tk.DISABLED)
         self.names_text.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
         self.names_text.tag_config('other', font=fm.chat_user_font, foreground=fm.chat_other_fg)
 
@@ -205,7 +205,8 @@ class GUI:
                                    width=30,
                                    wrap=tk.WORD,
                                    background=fm.white,
-                                   font=fm.chat_font)
+                                   font=fm.chat_font,
+                                   state=tk.DISABLED)
         self.chat_text.pack(expand=tk.YES, side=tk.LEFT, fill=tk.BOTH)
 
 
@@ -226,13 +227,14 @@ class GUI:
                                    wrap=tk.WORD,
                                    background=fm.white,
                                    font=fm.chat_font,
-                                    placeholder='Write your name and press enter to start the chat.')
+                                    placeholder='Write your name and press enter to start the chat.',
+                                    edit=True)
         self.chat_input.pack(expand=tk.YES, fill=tk.BOTH, side=tk.LEFT)
         self.chat_input.bind('<KeyRelease-Return>', self.chat_send_kp)
 
         right_frame.pack(side=tk.RIGHT, expand=tk.YES, fill=tk.BOTH)
 
-        top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.Y)
+        top_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
 
         self.status_entry = FancyEntry(self.root, background='SystemButtonFace', font=fm.status_font)
         self.status_entry.pack(side=tk.TOP, expand=tk.NO, fill=tk.X)
@@ -241,9 +243,29 @@ class GUI:
         tk.mainloop()
 
     def save_package(self):
-        fp = filedialog.asksaveasfilename(filetypes=(('Corpus', '.crps'),), defaultextension='.crps')
-        if fp:
-            self.corpus.save(fp)
+        zip_fp = filedialog.asksaveasfilename(filetypes=(('Corpus', '.crps'),), defaultextension='.crps')
+        with ZipFile(zip_fp, 'w') as zip:
+            text_data = {}
+            for i, text in enumerate(self.corpus.texts):
+                if text.filepath:
+                    fn = os.path.split(text.filepath)[-1]
+                elif text.title:
+                    fn = sub('[^a-zA-Z0-1 \-_()]', '', text.title)
+                    fn += '.txt'
+                else:
+                    fn = 'text ' + str(i) + '.txt'
+
+                zip.writestr(fn, text.text)
+                print(fn, text.text[:50])
+
+                text_data[fn] = {
+                    'filename': fn,
+                    'title': text.title,
+                }
+
+            zip.writestr('text_data.json', dumps(text_data))
+            zip.writestr('chat_settings.json', dumps(self.chat_settings))
+            zip.writestr('instructions.json', dumps(self.instructions.instructions))
 
     def open_chat_settings(self):
         ChatSettingsWindow(self.root, self.chat_settings)
@@ -268,7 +290,7 @@ class GUI:
 
     def chat_send(self):
         if self.chat is None:
-            self.chat_text.insert(tk.END, 'Connecting...\n')
+            self.chat_text.d_insert(tk.END, 'Connecting...\n')
             nickname = self.chat_input.get(1.0, tk.END).strip().replace(' ', '')
             if nickname:
                 self.chat = IRC(queue=self.queue,
@@ -278,7 +300,7 @@ class GUI:
                                 nickname=nickname)
 
                 if self.chat.error:
-                    self.chat_text.insert(tk.END, 'Failed to connect. Trying again.\n')
+                    self.chat_text.d_insert(tk.END, 'Failed to connect. Trying again.\n')
                     self.chat = None
                     self.root.after(2000, self.chat_send)
                 else:
@@ -291,11 +313,11 @@ class GUI:
         else:
             print(247, self.chat.nickname, self.chat_log.prev_user())
             if self.chat_log.prev_user() != self.chat.nickname:
-                self.chat_text.insert(tk.END, '\n' + self.chat.nickname + '\n', 'user')
+                self.chat_text.d_insert(tk.END, '\n' + self.chat.nickname + '\n', 'user')
 
             msg = self.chat_input.get(1.0, tk.END).strip()
             self.chat.sendmsg(self.chat_settings['channel'], msg)
-            self.chat_text.insert(tk.END, msg + '\n')
+            self.chat_text.d_insert(tk.END, msg + '\n')
             chat_msg = ChatMessage(user=self.chat.nickname, body=msg)
             self.chat_log.add(chat_msg)
 
@@ -422,6 +444,7 @@ class GUI:
         if search_str is None:
             search_str = self.search_var.get()
 
+        print('SEARCHING FOR:', search_str)
         p = Process(target=self.corpus.concordance, args=(search_str, conc_left, conc_right, self.conc_id))
         self.conc_processes.append(p)
         self.conc_id += 1
@@ -432,7 +455,6 @@ class GUI:
         """Removes any data and clears the queue."""
         self.clear_queue()
         self.search_entry.delete(0, tk.END)
-        self.status_text.delete(1.0, tk.END)
         self.corpus = None
         self.file_list.delete(0, tk.END)
 
@@ -519,17 +541,17 @@ class GUI:
 
             elif type(q_item) is ChatMessage:
                 if q_item.names_list:
-                    self.names_text.delete(1.0, tk.END)
+                    self.names_text.d_delete(1.0, tk.END)
                     for nm in q_item.names_list:
-                        self.names_text.insert(tk.END, nm, 'other')
-                        self.names_text.insert(tk.END, ' ')
+                        self.names_text.d_insert(tk.END, nm, 'other')
+                        self.names_text.d_insert(tk.END, ' ')
                 elif q_item.connected_as:
-                    self.chat_text.insert(tk.END, 'Connected as ' + q_item.connected_as + '\n')
+                    self.chat_text.d_insert(tk.END, 'Connected as ' + q_item.connected_as + '\n')
                     self.chat.nickname = q_item.connected_as
                 else:
                     if not self.chat_log or q_item.user and q_item.user != self.chat_log.prev_user():
-                        self.chat_text.insert(tk.END, '\n' + q_item.user + '\n', 'other')
-                    self.chat_text.insert(tk.END, q_item.body + '\n')
+                        self.chat_text.d_insert(tk.END, '\n' + q_item.user + '\n', 'other')
+                    self.chat_text.d_insert(tk.END, q_item.body + '\n')
                     self.chat_log.add(q_item)
                     if self.chat_scroll_lock:
                         self.chat_text.see(tk.END)
