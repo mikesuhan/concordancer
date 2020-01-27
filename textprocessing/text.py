@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from re import finditer, IGNORECASE, sub, findall, match
 from textprocessing.srt import parse_srt
 
@@ -32,7 +33,7 @@ class Text:
         if title:
             self.title = title
         elif filepath:
-            self.title = filepath
+            self.title = os.path.split(filepath)[-1]
         elif id is not None:
             self.title = 'Text ' + id
         else:

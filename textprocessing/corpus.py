@@ -1,5 +1,5 @@
 import os
-from json import dumps
+from json import dumps, loads
 from zipfile import ZipFile
 from io import BytesIO
 from operator import itemgetter
@@ -16,7 +16,7 @@ punctuation += '”“’‘—'
 class Corpus:
 
     text_proc_msg = 'Processing text {:,} of {:,}.'
-    ignore_exts = '.nfo',
+    ignore_exts = '.nfo', '.cprsi'
 
     def __init__(self, queue):
         self.queue = queue
@@ -40,7 +40,31 @@ class Corpus:
         m = Message('Manually input text loaded.')
         self.queue.put(m)
 
+    def load_package(self, zip_fp):
+        with ZipFile(zip_fp) as zip:
+            with zip.open('text_data.crpsi') as text_data:
+                text_data = loads(BytesIO(text_data.read()).read().decode('utf-8'))
+            with zip.open('chat_settings.crpsi') as chat_settings:
+                chat_settings = loads(BytesIO(chat_settings.read()).read().decode('utf-8'))
+            with zip.open('instructions.crpsi') as instructions:
+                instructions = loads(BytesIO(instructions.read()).read().decode('utf-8'))
 
+            i = 0
+            titles = []
+
+            print(text_data)
+
+            for i, key in enumerate(text_data):
+                with zip.open(key) as f:
+                    text = Text(title=text_data[key]['title'], io=BytesIO(f.read()), id=i, filepath=text_data[key]['filename'])
+                    self.texts.append(text)
+                    titles.append(text_data[key]['title'])
+
+        m = '{:,} text{} loaded.'.format(
+            i,
+            's' if i != 1 else ''
+        )
+        return Message(m, added_texts=titles), chat_settings, instructions
 
     def load_texts(self, *text_paths):
         text_count = 0
@@ -48,7 +72,7 @@ class Corpus:
             self.texts = []
         for tp in text_paths:
             if tp not in self.text_paths:
-                if tp.endswith('.zip'):
+                if tp.endswith(('.zip', '.crps')):
                     with ZipFile(tp) as zip:
                         for fn in [f for f in zip.namelist() if not f.endswith(self.ignore_exts)]:
                             with zip.open(fn) as f:
@@ -63,10 +87,11 @@ class Corpus:
                     text_count += 1
         m = '{:,} text{} loaded.'.format(
             text_count,
-            's' if text_count > 1 else ''
+            's' if text_count != 1 else ''
         )
 
         added_texts = [t.title for t in self.texts[-len(text_paths):]]
+
         return Message(m, added_texts=added_texts)
 
 

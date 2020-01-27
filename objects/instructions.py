@@ -2,7 +2,7 @@ from json import loads
 import tkinter as tk
 
 class Instructions:
-    def __init__(self, json_instructions=None):
+    def __init__(self, json_instructions=None, instructions=None):
         # Load from file or string
         if json_instructions:
             if json_instructions.endswith('.json'):
@@ -11,6 +11,8 @@ class Instructions:
             self.instructions = loads(json_instructions)
 
         # Set to default
+        elif instructions:
+            self.instructions = instructions
         else:
             self.instructions = [
                 ['Main Window', 'Welcome to the concordancing program'],

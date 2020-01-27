@@ -75,7 +75,7 @@ class GUI:
         # File menu on menu bar
         file_menu = tk.Menu(menu_bar, tearoff=0)
         file_menu.add_command(label='Save Package', command=self.save_package)
-        file_menu.add_command(label='Load package')
+        file_menu.add_command(label='Load package', command=self.load_package)
 
         file_menu.add_separator()
 
@@ -218,6 +218,8 @@ class GUI:
         self.chat_text.tag_config('user', font=fm.chat_user_font, foreground=fm.chat_me_fg)
         self.chat_text.tag_config('other', font=fm.chat_user_font, foreground=fm.chat_other_fg)
 
+        self.chat_text.d_insert(1.0, 'Enter your name below and press Return to connect to the chat.\n')
+
         chat_box_frame.pack(side=tk.TOP, expand=tk.YES, fill=tk.BOTH)
 
         self.chat_input = FancyText(right_frame,
@@ -227,7 +229,7 @@ class GUI:
                                    wrap=tk.WORD,
                                    background=fm.white,
                                    font=fm.chat_font,
-                                    placeholder='Write your name and press enter to start the chat.',
+                                    placeholder='Enter Name',
                                     edit=True)
         self.chat_input.pack(expand=tk.YES, fill=tk.BOTH, side=tk.LEFT)
         self.chat_input.bind('<KeyRelease-Return>', self.chat_send_kp)
@@ -242,6 +244,15 @@ class GUI:
 
         tk.mainloop()
 
+    def load_package(self):
+        zip_fp = filedialog.askopenfilename(filetypes=(('Corpus Packages', '*.crps'), ))
+        if zip_fp:
+            m, self.chat_settings, instructions = self.corpus.load_package(zip_fp)
+            self.instructions = Instructions(instructions=instructions)
+            self.status_text.d_delete(1.0, tk.END)
+            self.status_text.d_insert(1.0, self.instructions.get('Main Window'))
+            self.msg(m)
+
     def save_package(self):
         zip_fp = filedialog.asksaveasfilename(filetypes=(('Corpus', '.crps'),), defaultextension='.crps')
         with ZipFile(zip_fp, 'w') as zip:
@@ -249,6 +260,9 @@ class GUI:
             for i, text in enumerate(self.corpus.texts):
                 if text.filepath:
                     fn = os.path.split(text.filepath)[-1]
+                    fn = fn.split('.')
+                    fn[-1] = 'txt'
+                    fn = '.'.join(fn)
                 elif text.title:
                     fn = sub('[^a-zA-Z0-1 \-_()]', '', text.title)
                     fn += '.txt'
@@ -256,16 +270,15 @@ class GUI:
                     fn = 'text ' + str(i) + '.txt'
 
                 zip.writestr(fn, text.text)
-                print(fn, text.text[:50])
 
                 text_data[fn] = {
                     'filename': fn,
                     'title': text.title,
                 }
-
-            zip.writestr('text_data.json', dumps(text_data))
-            zip.writestr('chat_settings.json', dumps(self.chat_settings))
-            zip.writestr('instructions.json', dumps(self.instructions.instructions))
+            # saves as json with cprsi extension
+            zip.writestr('text_data.crpsi', dumps(text_data))
+            zip.writestr('chat_settings.crpsi', dumps(self.chat_settings))
+            zip.writestr('instructions.crpsi', dumps(self.instructions.instructions))
 
     def open_chat_settings(self):
         ChatSettingsWindow(self.root, self.chat_settings)
@@ -285,7 +298,6 @@ class GUI:
         sb_end_pos = 1.0 - sb_height
         sb_end_pos = ceil(sb_end_pos * 10000) / 10000
         self.chat_scroll_lock = str(sb_y_pos) == str(sb_end_pos)
-        print(str(sb_end_pos), str(sb_y_pos), self.chat_scroll_lock)
 
 
     def chat_send(self):
@@ -311,7 +323,6 @@ class GUI:
 
 
         else:
-            print(247, self.chat.nickname, self.chat_log.prev_user())
             if self.chat_log.prev_user() != self.chat.nickname:
                 self.chat_text.d_insert(tk.END, '\n' + self.chat.nickname + '\n', 'user')
 
@@ -444,7 +455,6 @@ class GUI:
         if search_str is None:
             search_str = self.search_var.get()
 
-        print('SEARCHING FOR:', search_str)
         p = Process(target=self.corpus.concordance, args=(search_str, conc_left, conc_right, self.conc_id))
         self.conc_processes.append(p)
         self.conc_id += 1
@@ -455,7 +465,8 @@ class GUI:
         """Removes any data and clears the queue."""
         self.clear_queue()
         self.search_entry.delete(0, tk.END)
-        self.corpus = None
+        del self.corpus
+        self.corpus = Corpus(self.queue)
         self.file_list.delete(0, tk.END)
 
     def open_instructions_window(self):
@@ -582,7 +593,7 @@ class GUI:
             self.root.after(100, self.process_queue)
 
         except queue.Empty:
-                pass
+            pass
 
     def clear_queue(self):
         try:
